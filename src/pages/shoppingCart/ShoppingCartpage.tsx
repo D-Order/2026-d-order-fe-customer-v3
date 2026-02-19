@@ -1,27 +1,28 @@
-import styled from "styled-components";
-import { useNavigate } from "react-router-dom";
-import { ROUTE_CONSTANTS } from "@constants/RouteConstants";
-import { IMAGE_CONSTANTS } from "@constants/ImageConstants";
-import { toast } from "react-toastify";
-import ShoppingHeader from "./_components/ShoppingHeader";
-import Character from "@assets/images/character.svg";
-import ShoppingItem from "./_components/ShoppingItem";
-import ShoppingFooter from "./_components/ShoppingFooter";
-import ConfirmModal from "./_modal/ConfitmMotal";
-import SendMoneyModal from "./_modal/sendMoneyModal";
-import useShoppingCartPage from "./_hooks/useShoppingCartPage";
-import { useEffect, useState } from "react";
-import { Menu } from "./types/types";
-import CouponModal from "./_modal/CouponModal";
+import * as S from './ShoppingCartPage.styled';
+import { useNavigate } from 'react-router-dom';
+import { ROUTE_CONSTANTS } from '@constants/RouteConstants';
+import { IMAGE_CONSTANTS } from '@constants/ImageConstants';
+import { toast } from 'react-toastify';
+import ShoppingHeader from './_components/ShoppingHeader';
+import Character from '@assets/images/character.svg';
+import ShoppingItem from './_components/ShoppingItem';
+import ShoppingFooter from './_components/ShoppingFooter';
+import ConfirmModal from './_modal/ConfitmMotal';
+import SendMoneyModal from './_modal/sendMoneyModal';
+import { useEffect, useState } from 'react';
+import { Menu } from './types/types';
+import CouponModal from './_modal/CouponModal';
+// 더미 사용 중. 실제 API 연결 시 useShoppingCartPage 로 변경
+import useShoppingCartPage from './_hooks/useShoppingCartPageWithDummy';
 
 const ShoppingCartPage = () => {
   const navigate = useNavigate();
   const [menus, setMenu] = useState<Menu[]>([]);
   const [setMenus, setSetMenu] = useState<Menu[]>([]);
-  const [couponCode, setCouponCode] = useState("");
-  const [usingCoupon, setUsingCoupon] = useState("");
-  const [couponName, setCouponName] = useState("");
-  const [couponType, setCouponType] = useState("");
+  const [couponCode, setCouponCode] = useState('');
+  const [usingCoupon, setUsingCoupon] = useState('');
+  const [couponName, setCouponName] = useState('');
+  const [couponType, setCouponType] = useState('');
   const {
     shoppingItemResponse,
     isConfirmModal,
@@ -50,20 +51,21 @@ const ShoppingCartPage = () => {
   const CopyAccount = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
-      toast.success("계좌번호가 복사되었어요!", {
+      toast.success('계좌번호가 복사되었어요!', {
         icon: <img src={IMAGE_CONSTANTS.CHECK} />,
         closeButton: false,
         style: {
-          backgroundColor: "#FF6E3F",
-          color: "#FAFAFA",
-          fontSize: "1rem",
-          fontWeight: "800",
-          borderRadius: "8px",
-          padding: "0.75rem 0.875rem",
+          backgroundColor: '#FF6E3F',
+          color: '#FAFAFA',
+          fontSize: '1rem',
+          fontWeight: '800',
+          borderRadius: '8px',
+          padding: '0.75rem 0.875rem',
+          boxSizing: 'border-box',
         },
       });
     } catch {
-      alert("다시 시도해주세요");
+      alert('다시 시도해주세요');
     }
   };
 
@@ -78,7 +80,7 @@ const ShoppingCartPage = () => {
     }
   }, [shoppingItemResponse]);
   return (
-    <Wrapper>
+    <S.Wrapper>
       <ShoppingHeader
         text="장바구니"
         goBack={() => {
@@ -87,13 +89,13 @@ const ShoppingCartPage = () => {
       />
 
       {menus.length === 0 && setMenus.length === 0 ? (
-        <ShoppingListEmpty>
+        <S.ShoppingListEmpty>
           <img src={Character} alt="이미지" />
           <p>아직 장바구니에 담긴 메뉴가 없어요.</p>
-        </ShoppingListEmpty>
+        </S.ShoppingListEmpty>
       ) : (
         <>
-          <ShoppingListWrapper>
+          <S.ShoppingListWrapper>
             {menus.map((item) => (
               <ShoppingItem
                 key={item.id}
@@ -112,7 +114,7 @@ const ShoppingCartPage = () => {
                 deleteItem={() => deleteItem(item.id)}
               />
             ))}
-          </ShoppingListWrapper>
+          </S.ShoppingListWrapper>
           <ShoppingFooter
             totalPrice={totalPrice}
             originalPrice={originalPrice}
@@ -127,15 +129,15 @@ const ShoppingCartPage = () => {
       )}
 
       {isConfirmModal && (
-        <DarkWrapper>
+        <S.DarkWrapper>
           <ConfirmModal
-            text={errorMessage || ""}
+            text={errorMessage || ''}
             confirm={CloseModal}
           ></ConfirmModal>
-        </DarkWrapper>
+        </S.DarkWrapper>
       )}
       {isSendMoneyModal && accountInfo && (
-        <DarkWrapper>
+        <S.DarkWrapper>
           <SendMoneyModal
             canclePay={CloseAcoountModal}
             pay={Pay}
@@ -143,11 +145,12 @@ const ShoppingCartPage = () => {
             totalPrice={totalPrice}
             accountInfo={accountInfo}
             usingCoupon={usingCoupon}
+            onAfterStaffRequest={() => navigate(ROUTE_CONSTANTS.ORDERCOMPLETE)}
           />
-        </DarkWrapper>
+        </S.DarkWrapper>
       )}
       {isCouponModal && (
-        <DarkWrapper>
+        <S.DarkWrapper>
           <CouponModal
             onClose={() => setIsCouponModal(false)}
             CheckCoupon={CheckCoupon}
@@ -161,57 +164,10 @@ const ShoppingCartPage = () => {
             setCouponType={setCouponType}
             couponType={couponType}
           />
-        </DarkWrapper>
+        </S.DarkWrapper>
       )}
-    </Wrapper>
+    </S.Wrapper>
   );
 };
 
 export default ShoppingCartPage;
-
-const Wrapper = styled.div`
-  width: 100%;
-  height: calc(var(--vh, 1vh) * 100);
-  position: relative;
-`;
-const ShoppingListEmpty = styled.div`
-  box-sizing: border-box;
-  padding: 1em;
-
-  display: flex;
-  flex-direction: column;
-  gap: 3rem;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: calc(var(--vh, 1vh) * 100 - 98px - 200px);
-
-  img {
-    width: 60%;
-  }
-  p {
-    color: ${({ theme }) => theme.colors.Black01};
-    ${({ theme }) => theme.fonts.Bold18}
-  }
-`;
-
-const ShoppingListWrapper = styled.div`
-  box-sizing: border-box;
-  padding: 0 1.25em;
-  /* margin-top: 2em; */
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  max-height: calc(var(--vh, 1vh) * 100 - 200px - 100px - 2em);
-  overflow-y: auto;
-`;
-
-const DarkWrapper = styled.div`
-  position: absolute;
-  top: 0;
-  width: 100%;
-  height: 100vh;
-
-  background-color: rgba(0, 0, 0, 0.4);
-  z-index: 11;
-`;
