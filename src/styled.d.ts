@@ -52,5 +52,8 @@ declare module "styled-components" {
       Medium12: any;
       SemiBold10: any;
     };
+    status: {
+      error: string;
+    };
   }
 }
