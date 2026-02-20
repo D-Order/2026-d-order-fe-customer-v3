@@ -1,6 +1,8 @@
 import * as S from './MenuListPage.styled';
+import { useNavigate } from 'react-router-dom';
 
-import useMenuListPage from './_hooks/useMenuListPage';
+// 더미 사용 중. 실제 API 연결 시 useMenuListPage 로 변경
+import useMenuListPage from './_hooks/useMenuListPageWithDummy';
 
 import MenuListPageHeader from './_components/MenuListPageHeader/MenuListPageHeader';
 import MenuList from './_components/MenuList/MenuList';
@@ -9,6 +11,9 @@ import MenuAssignSidModal from './_components/modals/menuAssignSideModal/MenuAss
 import MenuListHeader from './_components/Header/MenuListHeader';
 
 import Loading from '@components/loading/Loading';
+
+import { IMAGE_CONSTANTS } from '@constants/ImageConstants';
+import { ROUTE_CONSTANTS } from '@constants/RouteConstants';
 
 const MenulistPage = () => {
   const {
@@ -37,6 +42,8 @@ const MenulistPage = () => {
     handleIncrease,
     handleDecrease,
   } = useMenuListPage();
+
+  const navigate = useNavigate();
 
   if (isLoading) return <Loading />;
   return (
@@ -82,6 +89,11 @@ const MenulistPage = () => {
           onNavigate={handleNavigate}
         />
       )}
+      <S.DorderDevelopers
+        src={IMAGE_CONSTANTS.DORDER_DEVELOPERS}
+        alt="Dorder Developers"
+        onClick={() => navigate(ROUTE_CONSTANTS.DEVPAGE)}
+      />
     </S.Wrapper>
   );
 };

@@ -10,3 +10,12 @@ export const Container = styled.div`
   flex-direction: column;
   gap: 1.875rem;
 `;
+
+export const DorderDevelopers = styled.img`
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+
+  box-sizing: border-box;
+  padding: 0rem 1rem 1rem 1rem;
+`;
