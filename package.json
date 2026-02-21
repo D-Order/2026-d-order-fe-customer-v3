@@ -1,5 +1,5 @@
 {
-  "name": "2025-d-order-fe-customer-v2",
+  "name": "2026-d-order-fe-customer-v3",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -37,5 +37,8 @@
     "typescript-eslint": "^8.26.1",
     "vite": "^6.3.1",
     "vite-plugin-svgr": "^4.5.0"
+  },
+  "overrides": {
+    "minimatch": "^10.2.1"
   }
 }
