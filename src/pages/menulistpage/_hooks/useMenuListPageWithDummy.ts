@@ -1,14 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-// import { MenuListService } from '../_services/MenuListService';
 import { ROUTE_CONSTANTS } from '@constants/RouteConstants';
-import { MENULISTPAGE_CONSTANTS } from '../_constants/menulistpageconstants';
-// import { useShoppingCartStore } from '@stores/shoppingCartStore';
-// import { MenuListPageService } from '../_Dummy/MenuListPageService';
-import { MenuListService } from '../_services/MenuListService';
+import { MenuListPageService } from '../_Dummy/MenuListPageService';
 import { CartService } from '../_services/CartService';
-import { BoothID } from '../_services/BoothID';
 import { sortByPriceDesc } from '../_utils/sortByPrice';
 
 const SCROLL_OFFSET = 120;
@@ -33,9 +28,11 @@ interface SetMenuItem extends BaseMenuItem {
   }[];
 }
 
-// type MenuItem = BaseMenuItem | SetMenuItem;
-
-const useMenuListPage = () => {
+/**
+ * 메뉴 리스트 페이지 - 더미 데이터 전용 훅.
+ * 실제 API 연결 시 useMenuListPage 로 import 변경하면 됨.
+ */
+const useMenuListPageWithDummy = () => {
   const navigate = useNavigate();
 
   const [cartCount, setCartCount] = useState<boolean>(false);
@@ -93,142 +90,24 @@ const useMenuListPage = () => {
   }, []);
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchData = () => {
       setIsLoading(true);
       try {
-        const boothId = localStorage.getItem('boothId');
-        if (!boothId || !/^\d+$/.test(boothId)) {
-          setIsLoading(false);
-          // navigate(ROUTE_CONSTANTS.LOGIN);
-          return;
-        }
-
         const tableId = localStorage.getItem('tableNum');
-        const boothIdNumber = parseInt(boothId, 10);
-        const tableNumber = tableId ? parseInt(tableId, 10) : null;
+        const parsed = tableId ? parseInt(tableId, 10) : NaN;
+        const tableNumber = Number.isNaN(parsed) ? null : parsed;
+        // 더미: 테이블 번호 없어도 헤더(카테고리 탭) 노출을 위해 기본값 1 사용
+        setTableNum(tableNumber !== null ? tableNumber : 1);
 
-        if (Number.isNaN(boothIdNumber)) throw new Error('Invalid boothId');
-
-        // ✅ 실제 API 호출
-        const { table, menus, setmenus } =
-          await MenuListService.fetchAllMenus(boothIdNumber);
-
-        setTableNum(tableNumber);
-
-        // 1) seat_fee 후보(메뉴 배열 안) — id/이미지 등 메타 재활용용
-        const seatFeeFromMenus = Array.isArray(menus)
-          ? menus.find((m) => m.menu_category === 'seat_fee')
-          : undefined;
-
-        // 2) 테이블 이용료 아이템 구성 (table.seat_type 우선)
-        let seatItem: BaseMenuItem | null = null;
-        const NON_IMG = MENULISTPAGE_CONSTANTS.MENUITEMS.IMAGES.NONIMAGE;
-
-        if (table?.seat_type === 'table') {
-          seatItem = {
-            id: seatFeeFromMenus?.menu_id ?? 999001,
-            name: seatFeeFromMenus?.menu_name ?? '테이블 이용료',
-            description:
-              seatFeeFromMenus?.menu_description ??
-              '테이블 기준 1회 필수 주문이 필요해요.',
-            price: table?.seat_tax_table ?? seatFeeFromMenus?.menu_price ?? 0,
-            imageUrl: seatFeeFromMenus?.menu_image ?? NON_IMG,
-            quantity: 1, // 테이블당 1회
-            soldOut: table.is_seatfee_soldout ?? false,
-            category: 'tableFee',
-          };
-        } else if (table?.seat_type === 'person') {
-          seatItem = {
-            id: seatFeeFromMenus?.menu_id ?? 999002,
-            name: seatFeeFromMenus?.menu_name ?? '테이블 이용료',
-            description:
-              seatFeeFromMenus?.menu_description ??
-              '인원 수에 맞춰 주문해 주세요.',
-            price: table?.seat_tax_person ?? seatFeeFromMenus?.menu_price ?? 0,
-            imageUrl: seatFeeFromMenus?.menu_image ?? NON_IMG,
-            quantity: 100, // 인원 기준: 충분히 크게(클라에서 상한 체크)
-            soldOut: table.is_seatfee_soldout ?? false,
-            category: 'tableFee',
-          };
-        } else if (table?.seat_type === 'none') {
-          seatItem = {
-            id: seatFeeFromMenus?.menu_id ?? 999003,
-            name: seatFeeFromMenus?.menu_name ?? '테이블 이용료',
-            description:
-              seatFeeFromMenus?.menu_description ??
-              '현재 테이블 이용이 제한되어 있어요.',
-            price: 0,
-            imageUrl: seatFeeFromMenus?.menu_image ?? NON_IMG,
-            quantity: 0,
-            soldOut: true,
-            category: 'tableFee',
-          };
-        } else {
-          // table 정보가 없을 때: seat_fee가 menus에 있으면 사용, 아니면 노출 생략
-          if (seatFeeFromMenus) {
-            seatItem = {
-              id: seatFeeFromMenus.menu_id,
-              name: seatFeeFromMenus.menu_name ?? '테이블 이용료',
-              description:
-                seatFeeFromMenus.menu_description ?? '테이블 이용료입니다.',
-              price: seatFeeFromMenus.menu_price ?? 0,
-              imageUrl: seatFeeFromMenus.menu_image ?? NON_IMG,
-              quantity: seatFeeFromMenus.menu_amount ?? 1, // 백엔드 수량이 매우 클 수 있음
-              soldOut: !!seatFeeFromMenus.is_soldout,
-              category: 'tableFee',
-            };
-          } else {
-            seatItem = null; // 아예 노출하지 않음
-          }
-        }
-
-        // 3) 일반 메뉴 매핑 (seat_fee 제외)
-        const mappedMenus: BaseMenuItem[] = sortByPriceDesc(
-          (menus ?? []).filter((m) => m.menu_category !== 'seat_fee'),
-          (m) => m.menu_price,
-        ).map((m) => {
-          const mappedCategory: 'menu' | 'drink' =
-            m.menu_category === '음료' ? 'drink' : 'menu';
-          return {
-            id: m.menu_id,
-            name: m.menu_name,
-            description: m.menu_description,
-            price: m.menu_price,
-            imageUrl: m.menu_image ?? undefined,
-            quantity: m.menu_amount,
-            soldOut: !!m.is_soldout || m.menu_amount <= 0,
-            category: mappedCategory,
-          };
-        });
-
-        // 4) 세트 메뉴 매핑
-        const mappedSets: SetMenuItem[] = sortByPriceDesc(
-          setmenus ?? [],
-          (s) => s.set_price,
-        ).map((s) => ({
-          id: s.set_menu_id,
-          name: s.set_name,
-          description: s.set_description,
-          originprice: s.origin_price,
-          price: s.set_price,
-          imageUrl: s.set_image ?? undefined,
-          quantity: s.min_menu_amount,
-          soldOut: !!s.is_soldout,
-          category: 'set',
-          menuItems: s.menu_items ?? [],
-        }));
-
-        const allItems = [
-          ...(seatItem ? [seatItem] : []),
-          ...mappedSets,
-          ...mappedMenus,
-        ];
-
+        const menuItemsData = MenuListPageService.fetchMenuItems();
+        const setMenusData = MenuListPageService.fetchSetMenus();
+        const allItems = [...menuItemsData, ...setMenusData] as (
+          | BaseMenuItem
+          | SetMenuItem
+        )[];
         const allItemsSorted = sortByPriceDesc(allItems, (i) => i.price);
-
         setMenuItems(allItemsSorted);
-        const boothName = await BoothID.getName(boothIdNumber);
-        setBoothName(boothName);
+        setBoothName('더미 부스');
       } catch (e) {
         console.error(e);
         setMenuItems([]);
@@ -332,12 +211,10 @@ const useMenuListPage = () => {
     }
     if (count <= 0) return;
 
-    // ✅ type 매핑: set → set_menu, 나머지는 menu
     const type: 'menu' | 'set_menu' =
       selectedItem.category === 'set' ? 'set_menu' : 'menu';
 
     try {
-      // 🔗 장바구니 API 호출
       await CartService.add({
         table_num: tableNum,
         type,
@@ -347,7 +224,6 @@ const useMenuListPage = () => {
 
       refreshCartCount();
 
-      // 기존 UX 흐름 유지
       setIsClosing(true);
       setTimeout(() => {
         setIsModalOpen(false);
@@ -399,8 +275,8 @@ const useMenuListPage = () => {
     showToast,
     handleDecrease,
     handleIncrease,
-    errorToast, // 빌드오류해결을 위해 읽히지 않고 있는값 추가
+    errorToast,
   };
 };
 
-export default useMenuListPage;
+export default useMenuListPageWithDummy;

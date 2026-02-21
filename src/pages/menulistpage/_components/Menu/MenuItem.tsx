@@ -24,22 +24,34 @@ interface MenuItemProps {
 
 const MenuItem = ({ item, onClick }: MenuItemProps) => {
   const [imgSrc, setImgSrc] = useState(
-    item.imageUrl || MENULISTPAGE_CONSTANTS.MENUITEMS.IMAGES.NONIMAGE
+    item.imageUrl || MENULISTPAGE_CONSTANTS.MENUITEMS.IMAGES.NONIMAGE,
   );
+  const price = Number(item?.price ?? 0);
   const isTableFeeAndSoldOut = item.category === 'tableFee' && item.soldOut;
+  const isTableFeeAndFree = item.category === 'tableFee' && price === 0;
   const isSetMenu = item.category === 'set';
+  const isDimmed = item.soldOut || isTableFeeAndFree;
+
   const handleClick = () => {
-    if (isTableFeeAndSoldOut) return;
+    if (isTableFeeAndSoldOut || isTableFeeAndFree) return;
     onClick(item);
   };
+
+  const descriptionText = item.soldOut
+    ? item.category === 'tableFee'
+      ? '입금 되었습니다'
+      : 'SOLD OUT'
+    : isTableFeeAndFree
+      ? 'FREE'
+      : item.description;
+
   const fmt = (v: unknown) =>
     new Intl.NumberFormat('ko-KR').format(Number(v ?? 0));
-  const price = Number(item?.price ?? 0);
 
   return (
     <S.Wrapper
-      $soldout={item.soldOut}
-      disabled={isTableFeeAndSoldOut}
+      $soldout={isDimmed}
+      disabled={isTableFeeAndSoldOut || isTableFeeAndFree}
       onClick={handleClick}
     >
       <S.Row>
@@ -51,13 +63,7 @@ const MenuItem = ({ item, onClick }: MenuItemProps) => {
         />
         <S.Col>
           <S.ItemName>{item.name}</S.ItemName>
-          <S.ItemDes $soldout={item.soldOut}>
-            {item.soldOut
-              ? item.category === 'tableFee'
-                ? '입금 되었습니다'
-                : 'SOLD OUT'
-              : item.description}
-          </S.ItemDes>
+          <S.ItemDes $soldout={isDimmed}>{descriptionText}</S.ItemDes>
         </S.Col>
       </S.Row>
       {isSetMenu && item.originprice && item.originprice > price ? (
@@ -68,11 +74,13 @@ const MenuItem = ({ item, onClick }: MenuItemProps) => {
           </S.Discount>
           <S.Col2>
             <S.ItemPrice_deco>{fmt(item.originprice)}원</S.ItemPrice_deco>
-            <S.ItemPrice>{fmt(price)}원</S.ItemPrice>
+            <S.ItemPrice>
+              {isTableFeeAndFree ? 'FREE' : `${fmt(price)}원`}
+            </S.ItemPrice>
           </S.Col2>
         </S.Row2>
       ) : (
-        <S.ItemPrice>{fmt(price)}원</S.ItemPrice>
+        <S.ItemPrice>{`${fmt(price)}원`}</S.ItemPrice>
       )}
     </S.Wrapper>
   );

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import styled from "styled-components";
 import close from "@assets/icons/close.svg";
 import plus from "@assets/icons/plus.svg";
@@ -6,7 +7,9 @@ import minus from "@assets/icons/minus.svg";
 import minusDisavle from "@assets/icons/minusDisable.svg";
 import Line from "@assets/images/Line3.svg";
 import { Menu } from "../types/types";
-import { IMAGE_CONSTANTS } from "@constants/ImageConstants";
+import { MENULISTPAGE_CONSTANTS } from "@pages/menulistpage/_constants/menulistpageconstants";
+
+const DEFAULT_FOOD_IMAGE = MENULISTPAGE_CONSTANTS.MENUITEMS.IMAGES.NONIMAGE;
 
 interface ShoppingListProps {
   item: Menu;
@@ -21,15 +24,19 @@ const ShoppingItem = ({
   onDecrease,
   deleteItem,
 }: ShoppingListProps) => {
+  const [imgSrc, setImgSrc] = useState(
+    item.menu_image || DEFAULT_FOOD_IMAGE
+  );
+
   return (
     <>
       <ShoppingItemWrapper>
         <ImgWrapper>
-          {item.menu_image ? (
-            <img src={`${item.menu_image}`} alt="선택한 음식 사진" />
-          ) : (
-            <img src={IMAGE_CONSTANTS.CHARACTER} alt="기본 사진" />
-          )}
+          <img
+            src={imgSrc}
+            alt="선택한 음식 사진"
+            onError={() => setImgSrc(DEFAULT_FOOD_IMAGE)}
+          />
         </ImgWrapper>
         <div className="itemContainer">
           <div className="contentWrapper">
@@ -80,11 +87,11 @@ const ShoppingItem = ({
                 <img
                   src={
                     item.quantity === item.menu_amount ||
-                    item.quantity === item.min_menu_amount ||
                     item.menu_name === "테이블 이용료(테이블당)"
                       ? PlusDisable
                       : plus
                   }
+                  alt="수량 증가"
                 />
               </button>
             </AmountWrapper>

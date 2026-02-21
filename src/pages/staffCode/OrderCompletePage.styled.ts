@@ -1,5 +1,5 @@
-import styled from "styled-components";
-import CharacterLogo from "@assets/images/character.svg?react"; // SVG 컴포넌트 임포트
+import styled from 'styled-components';
+import CharacterLogo from '@assets/images/character.svg?react'; // SVG 컴포넌트 임포트
 
 export const Wrapper = styled.div`
   display: flex;
@@ -52,7 +52,7 @@ export const ToDevPageBtn = styled.button`
   display: flex;
   justify-content: center;
   align-items: center;
-  img{
+  img {
     width: 100%;
   }
 `;
@@ -79,7 +79,6 @@ export const Logo = styled(CharacterLogo)`
   z-index: 1; // 로고를 앞쪽으로 유지
 `;
 
-
 export const BtnWrapper = styled.div`
   display: flex;
   flex-direction: column;
@@ -89,10 +88,10 @@ export const BtnWrapper = styled.div`
   position: absolute;
   bottom: 25px;
 
-  @media (min-height: 850px) {
+  /* @media (min-height: 850px) {
     position: static; // position을 static으로 변경
     margin-top: 300px; // margin-top 추가
-  }
+  } */
 `;
 export const Row = styled.div`
   display: flex;

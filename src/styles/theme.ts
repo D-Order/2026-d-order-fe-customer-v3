@@ -43,6 +43,7 @@ const colors = {
 
 const theme = {
   colors,
+  status,
 
   fonts: {
     Bold32: fontGenerator("SUIT-Bold", "32px", "700", "auto", "normal"),

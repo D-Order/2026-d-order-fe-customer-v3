@@ -1,7 +1,8 @@
-import styled from "styled-components";
-import React, { SetStateAction } from "react";
-import { toast } from "react-toastify";
-import { IMAGE_CONSTANTS } from "@constants/ImageConstants";
+import { useState } from 'react';
+import styled from 'styled-components';
+import React, { SetStateAction } from 'react';
+import { toast } from 'react-toastify';
+import { IMAGE_CONSTANTS } from '@constants/ImageConstants';
 
 interface CouponModalProps {
   onClose: () => void;
@@ -30,8 +31,11 @@ const CouponModal = ({
   setCouponType,
   couponType,
 }: CouponModalProps) => {
+  const [couponError, setCouponError] = useState(false);
+
   const handleApply = async () => {
     if (!couponCode.trim()) return;
+    setCouponError(false);
 
     try {
       if (appliedCoupon) return;
@@ -39,29 +43,36 @@ const CouponModal = ({
       setCouponName(result.data.coupon_name);
       setUsingCoupon(couponCode);
       setCouponType(result.data.discount_type);
-      setCouponCode("");
+      setCouponCode('');
+      setCouponError(false);
       onClose();
-    } catch (error: any) {
-      toast.error("해당 번호의 쿠폰이 존재하지 않아요!", {
-        icon: <img src={IMAGE_CONSTANTS.CHECK} />,
+    } catch {
+      setCouponError(true);
+      toast.error('해당 번호의 쿠폰이 존재하지 않아요!', {
+        icon: <img src={IMAGE_CONSTANTS.CHECK} alt="" />,
         closeButton: false,
         style: {
-          backgroundColor: "#FF6E3F",
-          color: "#FAFAFA",
-          fontSize: "14px",
-          fontWeight: "800",
-          borderRadius: "8px",
-          padding: "0.75rem 0.875rem",
+          backgroundColor: '#FF6E3F',
+          color: '#FAFAFA',
+          fontSize: '14px',
+          fontWeight: '800',
+          borderRadius: '8px',
+          padding: '0.75rem 0.875rem',
           zIndex: 100,
         },
       });
     }
   };
 
-  const isDisabled = couponCode === "" || appliedCoupon;
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setCouponCode(e.target.value);
+    if (couponError) setCouponError(false);
+  };
+
+  const isDisabled = couponCode === '' || appliedCoupon;
   const handleDeleteCoupon = () => {
     setAppliedCoupon(false);
-    setUsingCoupon("");
+    setUsingCoupon('');
   };
   return (
     <Wrapper>
@@ -71,10 +82,12 @@ const CouponModal = ({
           <CouponInput
             type="text"
             value={couponCode}
-            onChange={(e) => setCouponCode(e.target.value)}
+            onChange={handleInputChange}
             placeholder="쿠폰 번호 입력"
             disabled={appliedCoupon}
+            $hasError={couponError}
           />
+          {couponError && <ErrorText>유효하지 않은 쿠폰 번호입니다.</ErrorText>}
         </InputContainer>
         {appliedCoupon && (
           <CouponContainer>
@@ -82,7 +95,7 @@ const CouponModal = ({
             <CouponWraper>
               <img
                 src={
-                  couponType === "percent"
+                  couponType === 'percent'
                     ? IMAGE_CONSTANTS.COUPONICONPERCENT
                     : IMAGE_CONSTANTS.COUPONICON
                 }
@@ -144,19 +157,29 @@ const InputContainer = styled.div`
   margin-bottom: 24px;
 `;
 
-const CouponInput = styled.input`
+const CouponInput = styled.input<{ $hasError?: boolean }>`
   width: 100%;
   height: 48px;
-  border: 1px solid ${({ theme }) => theme.colors.Black02};
-  border-radius: 20px;
+  border: 1px solid
+    ${({ theme, $hasError }) =>
+      $hasError ? theme.status.error : theme.colors.Black02};
+  border-radius: 8px;
   padding: 0 16px;
   font-size: 16px;
   box-sizing: border-box;
   ${({ theme }) => theme.fonts.SemiBold12}
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.Black02};
+    border-color: ${({ theme, $hasError }) =>
+      $hasError ? theme.status.error : theme.colors.Black02};
   }
+`;
+
+const ErrorText = styled.p`
+  position: absolute;
+  margin: 6px 0 0;
+  color: ${({ theme }) => theme.status.error};
+  ${({ theme }) => theme.fonts.SemiBold12}
 `;
 
 const CouponContainer = styled.section`
@@ -208,7 +231,7 @@ const CancelButton = styled.button`
   flex: 1;
   background: none;
   border: none;
-  color: #ff6e3f;
+  color: #888888;
   padding: 8px 0;
   cursor: pointer;
   ${({ theme }) => theme.fonts.Medium16}
@@ -225,11 +248,8 @@ const ApplyButton = styled.button<{ disabled: boolean }>`
   background: none;
   border: none;
   color: ${({ disabled, theme }) =>
-    disabled ? theme.colors.Black02 : "#ff6e3f"};
+    disabled ? theme.colors.Black02 : theme.colors.Orange01};
   padding: 8px 0;
-  cursor: ${({ disabled }) => (disabled ? "not-allowed" : "pointer")};
+  cursor: ${({ disabled }) => (disabled ? 'not-allowed' : 'pointer')};
   ${({ theme }) => theme.fonts.Medium16}
-  &:hover {
-    opacity: ${({ disabled }) => (disabled ? 1 : 0.8)};
-  }
 `;
