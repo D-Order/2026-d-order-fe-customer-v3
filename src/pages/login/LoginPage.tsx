@@ -1,21 +1,21 @@
-import * as S from "./LoginPage.styled";
+import * as S from './LoginPage.styled';
 
-import { useSearchParams } from "react-router-dom";
-import { ChangeEvent, useRef, useState, useEffect } from "react";
-import LoginLogo from "./_components/LoginLogo";
-import Btn from "@components/button/Btn";
+import { useSearchParams } from 'react-router-dom';
+import { ChangeEvent, useRef, useState, useEffect } from 'react';
+import LoginLogo from './_components/LoginLogo';
+import Btn from '@components/button/Btn';
 
-import { fetchBoothName } from "./_api/LoginAPI";
+import { fetchBoothName } from './_api/LoginAPI';
 
-import { useLogin } from "./hooks/useLogin";
+import { useLogin } from './hooks/useLogin';
 
 const LoginPage = () => {
   const [searchParams] = useSearchParams();
-  const [boothName, setBoothName] = useState<string>("");
-  const [tableValue, setTableValue] = useState<string>("");
+  const [boothName, setBoothName] = useState<string>('');
+  const [tableValue, setTableValue] = useState<string>('');
   const tableRef = useRef<HTMLInputElement>(null);
 
-  const boothId = searchParams.get("id");
+  const boothId = searchParams.get('id');
 
   const {
     handleStartOrder,
@@ -29,23 +29,23 @@ const LoginPage = () => {
   // URL에서 부스 ID를 가져와 localStorage에 저장
   useEffect(() => {
     if (boothId) {
-      localStorage.setItem("boothId", boothId);
-      localStorage.removeItem("cartId");
+      localStorage.setItem('boothId', boothId);
+      localStorage.removeItem('cartId');
     }
   }, [boothId]);
 
   useEffect(() => {
     const getBoothInfo = async () => {
       try {
-        const storedBoothId = localStorage.getItem("boothId") || boothId;
+        const storedBoothId = localStorage.getItem('boothId') || boothId;
         if (storedBoothId) {
           const name = await fetchBoothName(storedBoothId);
           setBoothName(name);
         } else {
-          setBoothName("QR코드를 다시 찍어주세요.");
+          setBoothName('QR코드를 다시 찍어주세요.');
         }
       } catch (error) {
-        setBoothName("QR코드를 다시 찍어주세요.");
+        setBoothName('QR코드를 다시 찍어주세요.');
       }
     };
 
@@ -54,7 +54,7 @@ const LoginPage = () => {
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    let numericValue = value.replace(/[^0-9]/g, "");
+    let numericValue = value.replace(/[^0-9]/g, '');
 
     if (numericValue.length > 0) {
       numericValue = String(parseInt(numericValue, 10));
@@ -67,7 +67,7 @@ const LoginPage = () => {
     if (isTableError) {
       setIsTableError(false);
       setErrorMessage(
-        "실제와 다른 테이블 번호 입력 시, 이용이 제한될 수 있어요."
+        '실제와 다른 테이블 번호 입력 시, 이용이 제한될 수 있어요.',
       );
     }
 
