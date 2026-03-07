@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-// import { MenuListService } from '../_services/MenuListService';
 import { ROUTE_CONSTANTS } from '@constants/RouteConstants';
 import { MENULISTPAGE_CONSTANTS } from '../_constants/menulistpageconstants';
 // import { useShoppingCartStore } from '@stores/shoppingCartStore';
