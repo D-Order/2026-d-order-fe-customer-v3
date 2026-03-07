@@ -1,8 +1,8 @@
 // src/pages/MenuListPage/_services/MenuListService.ts
-import { instance } from "@services/instance";
+import { instance } from '@services/instance';
 
 export type ApiSeat = {
-  seat_type: "table" | "person" | "none" | string;
+  seat_type: 'table' | 'person' | 'none' | string;
   seat_tax_table?: number;
   seat_tax_person?: number;
   is_seatfee_soldout?: boolean;
@@ -13,7 +13,7 @@ export type ApiMenu = {
   booth_id: number;
   menu_name: string;
   menu_description: string;
-  menu_category: "메뉴" | "음료" | "seat_fee" | string;
+  menu_category: '메뉴' | '음료' | 'seat_fee' | string;
   menu_price: number;
   menu_amount: number;
   menu_image: string | null;
@@ -46,10 +46,10 @@ export type BoothAllMenusResponse = {
 
 export const MenuListService = {
   fetchAllMenus: async (boothId: number) => {
-    const tableNum = localStorage.getItem("tableNum") || "";
+    const tableNum = localStorage.getItem('tableNum') || '';
 
     const res = await instance.get<BoothAllMenusResponse>(
-      `/api/v2/booth/${boothId}/all-menus/?table_num=${tableNum}`
+      `/api/v3/django/booth/${boothId}/menu-list/?table_num=${tableNum}`,
     );
     //console.log(res);
     return res.data.data; // { booth_id, table, menus, setmenus }

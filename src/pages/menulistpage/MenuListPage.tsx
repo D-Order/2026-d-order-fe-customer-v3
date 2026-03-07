@@ -2,8 +2,8 @@ import * as S from './MenuListPage.styled';
 import { useNavigate } from 'react-router-dom';
 
 // 더미 사용 중. 실제 API 연결 시 useMenuListPage 로 변경
-import useMenuListPage from './_hooks/useMenuListPageWithDummy';
-
+// import useMenuListPage from './_hooks/useMenuListPageWithDummy';
+import useMenuListPage from './_hooks/useMenuListPage';
 import MenuListPageHeader from './_components/MenuListPageHeader/MenuListPageHeader';
 import MenuList from './_components/MenuList/MenuList';
 import MenuAssignModal from './_components/modals/MenuAssignModal/MenuAssignModal';
