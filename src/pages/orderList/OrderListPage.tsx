@@ -117,11 +117,9 @@ interface OrderItem {
 
 const OrderListPage = () => {
   const navigate = useNavigate();
-  // 로컬스토리지 값은 유지 (UI 로직상 필요할 수 있음)
-  const tableNum = Number(localStorage.getItem("tableNum") || 0);
-  const boothId = Number(localStorage.getItem("boothId") || 0);
+  const tableUsageId = Number(localStorage.getItem("tableUsageId") || 0);
 
-  const { orderData, loading, error } = useOrderList(tableNum, boothId);
+  const { orderData, loading, error } = useOrderList(tableUsageId);
   const [orderList, setOrderList] = useState<OrderItem[]>([]);
 
   useEffect(() => {
@@ -130,10 +128,12 @@ const OrderListPage = () => {
         id: item.id,
         name: item.name,
         price: item.price,
-        image: item.image ?? ACCO, // 이미지 없으면 기본 캐릭터
+        image: item.image ?? ACCO,
         quantity: item.quantity,
       }));
       setOrderList(mapped);
+    } else {
+      setOrderList([]);
     }
   }, [orderData]);
 

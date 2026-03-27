@@ -31,6 +31,7 @@ const LoginPage = () => {
     if (boothId) {
       localStorage.setItem('boothId', boothId);
       localStorage.removeItem('cartId');
+      localStorage.removeItem('tableUsageId');
     }
   }, [boothId]);
 

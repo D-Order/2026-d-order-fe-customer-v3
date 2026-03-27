@@ -35,6 +35,9 @@ export const useLogin = (boothId: string | null) => {
       // v3 성공 시 200 + message, data 반환
       if (body?.data?.table_num != null) {
         localStorage.setItem("tableNum", String(body.data.table_num));
+        if (typeof body?.data?.table_usage_id === "number") {
+          localStorage.setItem("tableUsageId", String(body.data.table_usage_id));
+        }
         // 로그인 성공 시 응답 헤더에 booth_id가 있으면 저장 (이후 API에서 헤더로 사용)
         const headerBoothId =
           response.headers["booth_id"] ??
