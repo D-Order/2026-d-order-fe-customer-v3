@@ -25,6 +25,7 @@ const colors = {
   Orange02: "#E66339",
   Highlight: "#BE5D3A",
   Gray01: "#F2F2F2",
+  Gray02: "#8A8A8A",
 
   // 텍스트 색상
   Black01: "#2A2A2A",
@@ -35,10 +36,13 @@ const colors = {
   White: "#FFFFFF",
   Black: "#000000",
   Success: "#0F851A",
+  Green01: "#0F851A",
   Error: "#F03F40",
   Focused: "#C0C0C0",
-  //Green01: "#0F851A",
-  //Gray02: "#8A8A8A",
+};
+
+const status = {
+  error: "#F03F40",
 };
 
 const theme = {

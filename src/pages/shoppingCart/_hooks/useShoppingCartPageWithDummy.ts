@@ -12,7 +12,7 @@ const useShoppingCartPageWithDummy = () => {
   const [shoppingItemResponse, setShoppingItemResponse] = useState<
     ShoppingItemResponseType | undefined
   >();
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [errorMessage] = useState<string | null>(null);
   const [accountInfo, setAccountInfo] = useState<ReturnType<
     typeof ShoppingCartPageService.getDummyAccountInfo
   > | null>(null);

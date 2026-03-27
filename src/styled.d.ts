@@ -15,6 +15,7 @@ declare module "styled-components" {
       Orange02: string;
       Highlight: string;
       Gray01: string;
+      Gray02: string;
 
       // 텍스트 색상
       Black01: string;
@@ -24,6 +25,7 @@ declare module "styled-components" {
       White: string;
       Black: string;
       Success: string;
+      Green01: string;
       Error: string;
       Focused: string;
     };

@@ -8,12 +8,16 @@ const ShoppingFooter = ({
   appliedCoupon,
   CheckShoppingItems,
   setIsCouponModal,
+  orderButtonDisabled,
+  orderButtonSubText,
 }: {
   totalPrice: number;
   originalPrice: number;
   appliedCoupon: boolean;
   CheckShoppingItems: () => void;
   setIsCouponModal: React.Dispatch<SetStateAction<boolean>>;
+  orderButtonDisabled: boolean;
+  orderButtonSubText?: string;
 }) => {
   return (
     <Wrapper>
@@ -36,7 +40,15 @@ const ShoppingFooter = ({
       <div
         style={{ justifyContent: 'center', width: '114%', marginLeft: '-7%' }}
       >
-        <Btn text="주문하기" onClick={CheckShoppingItems} />
+        <Btn
+          text={
+            orderButtonDisabled
+              ? orderButtonSubText || '결제 완료 후 이용 가능'
+              : '주문하기'
+          }
+          onClick={CheckShoppingItems}
+          disabled={orderButtonDisabled}
+        />
       </div>
     </Wrapper>
   );
@@ -113,3 +125,4 @@ const PriceText = styled.p`
   color: ${({ theme }) => theme.colors.Orange01};
   ${({ theme }) => theme.fonts.ExtraBold16}
 `;
+
