@@ -16,7 +16,11 @@ const SendMoneyModal = ({
   copyAccount,
   totalPrice,
   accountInfo,
+  paymentLoading,
+  paymentError,
+  onRetryLoadAccount,
   usingCoupon: _usingCoupon,
+  onRequestTransferConfirmation,
   onAfterStaffRequest,
 }: {
   canclePay: () => void;
@@ -27,12 +31,58 @@ const SendMoneyModal = ({
     account_holder: string;
     bank_name: string;
     account_number: string;
-  };
+  } | null;
+  paymentLoading: boolean;
+  paymentError: string | null;
+  onRetryLoadAccount: () => void;
   usingCoupon: string;
-  /** 직원 이동 중 대기 후 호출 (모달 닫고 주문 완료 페이지 등으로 이동) */
+  /** 「송금 확인 요청」 시 서버에 직원 호출·주문 처리 요청 */
+  onRequestTransferConfirmation?: () => Promise<void>;
+  /** 사용자가 주문 완료 화면으로 이동할 때 */
   onAfterStaffRequest?: () => void;
 }) => {
   const [step, setStep] = useState<Step>('account');
+  const [confirmSubmitting, setConfirmSubmitting] = useState(false);
+  const [confirmError, setConfirmError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (accountInfo) setStep('account');
+  }, [accountInfo]);
+
+  if (paymentLoading) {
+    return (
+      <ModalContainer $narrow>
+        <ConfirmHead>
+          <p>입금 계좌 안내</p>
+        </ConfirmHead>
+        <LoadingBody>계좌 정보를 불러오는 중이에요…</LoadingBody>
+        <ModalConfirm>
+          <button type="button" onClick={canclePay}>
+            닫기
+          </button>
+        </ModalConfirm>
+      </ModalContainer>
+    );
+  }
+
+  if (paymentError) {
+    return (
+      <ModalContainer $narrow>
+        <ConfirmHead>
+          <p>입금 계좌 안내</p>
+        </ConfirmHead>
+        <ErrorBody>{paymentError}</ErrorBody>
+        <ModalConfirm>
+          <button type="button" onClick={canclePay}>
+            닫기
+          </button>
+          <button type="button" onClick={onRetryLoadAccount}>
+            다시 시도
+          </button>
+        </ModalConfirm>
+      </ModalContainer>
+    );
+  }
 
   if (!accountInfo) return null;
 
@@ -42,18 +92,30 @@ const SendMoneyModal = ({
     totalPrice,
   };
 
-  const handleRequestConfirm = () => {
-    setStep('staffComing');
+  const handleRequestConfirm = async () => {
+    setConfirmError(null);
+    setConfirmSubmitting(true);
+    try {
+      if (onRequestTransferConfirmation) {
+        await onRequestTransferConfirmation();
+      }
+      setStep('staffComing');
+    } catch (e: unknown) {
+      const msg =
+        (e as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message ||
+        (e as Error)?.message ||
+        '요청에 실패했어요. 잠시 후 다시 시도해 주세요.';
+      setConfirmError(msg);
+    } finally {
+      setConfirmSubmitting(false);
+    }
   };
 
-  useEffect(() => {
-    if (step !== 'staffComing') return;
-    const t = setTimeout(() => {
-      canclePay();
-      onAfterStaffRequest?.();
-    }, 2500);
-    return () => clearTimeout(t);
-  }, [step, canclePay, onAfterStaffRequest]);
+  const handleGoOrderComplete = () => {
+    canclePay();
+    onAfterStaffRequest?.();
+  };
 
   // 1) 계좌 안내
   if (step === 'account') {
@@ -92,7 +154,7 @@ const SendMoneyModal = ({
     );
   }
 
-  // 2) 송금 완료했는지 확인 모달
+  // 2) 송금 완료 확인
   if (step === 'confirm') {
     return (
       <ModalContainer $narrow>
@@ -103,15 +165,28 @@ const SendMoneyModal = ({
           <p>확인 요청 시 직원이 호출됩니다.</p>
           <p>요청 후 취소가 어려울 수 있습니다.</p>
         </ConfirmWarnings>
+        {confirmError && <ConfirmErrorText>{confirmError}</ConfirmErrorText>}
         <ModalConfirm>
-          <button onClick={() => setStep('account')}>취소</button>
-          <button onClick={handleRequestConfirm}>송금 확인 요청</button>
+          <button
+            type="button"
+            disabled={confirmSubmitting}
+            onClick={() => setStep('account')}
+          >
+            취소
+          </button>
+          <button
+            type="button"
+            disabled={confirmSubmitting}
+            onClick={() => void handleRequestConfirm()}
+          >
+            {confirmSubmitting ? '요청 중…' : '송금 확인 요청'}
+          </button>
         </ModalConfirm>
       </ModalContainer>
     );
   }
 
-  // 3) 직원 이동 중 안내 (버튼 없음)
+  // 3) 직원 이동 중
   return (
     <ModalContainer $narrow>
       <StaffComingBody>
@@ -119,6 +194,11 @@ const SendMoneyModal = ({
         <p>직원이 이동 중입니다.</p>
         <p className="highlight">직원이 오면 송금 완료 화면을 보여주세요.</p>
       </StaffComingBody>
+      <StaffComingFooter>
+        <button type="button" onClick={handleGoOrderComplete}>
+          주문 완료 화면으로
+        </button>
+      </StaffComingFooter>
     </ModalContainer>
   );
 };
@@ -154,6 +234,30 @@ const ConfirmHead = styled.div`
   }
 `;
 
+const LoadingBody = styled.div`
+  padding: 2rem 1.5rem 2.5rem;
+  text-align: center;
+  color: ${({ theme }) => theme.colors.Black02};
+  ${({ theme }) => theme.fonts.SemiBold14}
+`;
+
+const ErrorBody = styled.div`
+  padding: 1.25rem 1.5rem 2rem;
+  text-align: center;
+  color: ${({ theme }) => theme.colors.Black01};
+  ${({ theme }) => theme.fonts.SemiBold14}
+  border-bottom: 1px solid #c0c0c0;
+  line-height: 1.45;
+`;
+
+const ConfirmErrorText = styled.p`
+  padding: 0 1.5rem 0.75rem;
+  margin: 0;
+  text-align: center;
+  color: ${({ theme }) => theme.colors.Orange01};
+  ${({ theme }) => theme.fonts.SemiBold12}
+`;
+
 const ConfirmWarnings = styled.div`
   padding: 1rem 2rem 3rem 2rem;
   flex-direction: column;
@@ -182,6 +286,19 @@ const StaffComingBody = styled.div`
   p.highlight {
     color: ${({ theme }) => theme.colors.Orange01};
     ${({ theme }) => theme.fonts.SemiBold14}
+  }
+`;
+
+const StaffComingFooter = styled.div`
+  display: flex;
+  justify-content: center;
+  padding: 0 1rem 1.25rem;
+  border-top: 1px solid #c0c0c0;
+  button {
+    width: 100%;
+    padding: 1rem;
+    color: ${({ theme }) => theme.colors.Orange01};
+    ${({ theme }) => theme.fonts.SemiBold16};
   }
 `;
 
@@ -224,12 +341,15 @@ const ModalConfirm = styled.div`
   align-items: center;
 
   button {
-    width: 50%;
+    flex: 1;
     color: ${({ theme }) => theme.colors.Orange01};
     ${({ theme }) => theme.fonts.SemiBold16};
     padding: 1rem;
   }
-  button:nth-child(1) {
+  button:only-child {
+    flex: 1;
+  }
+  button:not(:only-child):first-of-type {
     border-right: 1px solid #c0c0c0;
   }
 `;

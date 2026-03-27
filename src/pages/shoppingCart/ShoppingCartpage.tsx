@@ -12,8 +12,7 @@ import SendMoneyModal from './_modal/sendMoneyModal';
 import { useEffect, useState } from 'react';
 import { Menu } from './types/types';
 import CouponModal from './_modal/CouponModal';
-// 더미 사용 중. 실제 API 연결 시 useShoppingCartPage 로 변경
-import useShoppingCartPage from './_hooks/useShoppingCartPageWithDummy';
+import useShoppingCartPage from './_hooks/useShoppingCartPage';
 
 const ShoppingCartPage = () => {
   const navigate = useNavigate();
@@ -33,10 +32,12 @@ const ShoppingCartPage = () => {
     CloseModal,
     CloseAcoountModal,
     CheckAccount,
-    setIsSendMoneyModal,
+    requestPaymentConfirmation,
     Pay,
     errorMessage,
     accountInfo,
+    paymentModalLoading,
+    paymentModalError,
     FetchShoppingItems,
     increaseQuantity,
     decreaseQuantity,
@@ -45,6 +46,7 @@ const ShoppingCartPage = () => {
     isCouponModal,
     CheckCoupon,
     setAppliedCoupon,
+    isOrderable,
   } = useShoppingCartPage();
 
   // 계좌 복사 버튼
@@ -120,10 +122,10 @@ const ShoppingCartPage = () => {
             originalPrice={originalPrice}
             appliedCoupon={appliedCoupon}
             CheckShoppingItems={() => {
-              CheckAccount();
-              setIsSendMoneyModal(true);
+              void CheckAccount();
             }}
             setIsCouponModal={setIsCouponModal}
+            orderButtonDisabled={!isOrderable}
           />
         </>
       )}
@@ -136,7 +138,7 @@ const ShoppingCartPage = () => {
           ></ConfirmModal>
         </S.DarkWrapper>
       )}
-      {isSendMoneyModal && accountInfo && (
+      {isSendMoneyModal && (
         <S.DarkWrapper>
           <SendMoneyModal
             canclePay={CloseAcoountModal}
@@ -144,7 +146,13 @@ const ShoppingCartPage = () => {
             copyAccount={(text: string) => CopyAccount(text)}
             totalPrice={totalPrice}
             accountInfo={accountInfo}
+            paymentLoading={paymentModalLoading}
+            paymentError={paymentModalError}
+            onRetryLoadAccount={() => {
+              void CheckAccount();
+            }}
             usingCoupon={usingCoupon}
+            onRequestTransferConfirmation={requestPaymentConfirmation}
             onAfterStaffRequest={() => navigate(ROUTE_CONSTANTS.ORDERCOMPLETE)}
           />
         </S.DarkWrapper>
