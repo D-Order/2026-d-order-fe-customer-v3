@@ -1,20 +1,20 @@
-import { instance } from "@services/instance";
-import type { CartSnapshotData } from "../../../types/cartWs";
+import { instance } from '@services/instance';
+import type { CartSnapshotData } from '../../../types/cartWs';
 
 const getTableUsageId = (): number | null => {
-  const v = localStorage.getItem("tableUsageId");
+  const v = localStorage.getItem('tableUsageId');
   const n = v ? Number(v) : NaN;
   return Number.isFinite(n) ? n : null;
 };
 
-const getBoothId = (): string | null => localStorage.getItem("boothId");
+const getBoothId = (): string | null => localStorage.getItem('boothId');
 
 function isCartSnapshot(obj: unknown): obj is CartSnapshotData {
   return (
-    typeof obj === "object" &&
+    typeof obj === 'object' &&
     obj !== null &&
-    "cart" in obj &&
-    "items" in obj &&
+    'cart' in obj &&
+    'items' in obj &&
     Array.isArray((obj as CartSnapshotData).items)
   );
 }
@@ -31,11 +31,11 @@ export const cartApiV3 = {
     const boothId = getBoothId();
     const tableUsageId = getTableUsageId();
     if (!boothId || !tableUsageId) {
-      throw new Error("booth_id 또는 table_usage_id 없음");
+      throw new Error('booth_id 또는 table_usage_id 없음');
     }
 
-    const res = await instance.get<unknown>("/api/v3/django/cart/detail/", {
-      headers: { "Booth-ID": boothId },
+    const res = await instance.get<unknown>('/api/v3/django/cart/detail/', {
+      headers: { 'Booth-ID': boothId },
       params: { table_usage_id: tableUsageId },
     });
 
@@ -54,26 +54,27 @@ export const cartApiV3 = {
    * body: { table_usage_id, type: "menu"|"setmenu", menu_id, set_menu_id, quantity }
    */
   add: async (params: {
-    type: "menu" | "set_menu";
+    type: 'menu' | 'set_menu';
     menu_id?: number;
     set_menu_id?: number;
     quantity: number;
   }) => {
     const tableUsageId = getTableUsageId();
     const boothId = getBoothId();
-    if (!tableUsageId || !boothId) throw new Error("table_usage_id 또는 booth_id 없음");
+    if (!tableUsageId || !boothId)
+      throw new Error('table_usage_id 또는 booth_id 없음');
 
-    const isMenu = params.type === "menu";
+    const isMenu = params.type === 'menu';
     const body = {
       table_usage_id: tableUsageId,
-      type: isMenu ? "menu" : "setmenu",
+      type: isMenu ? 'menu' : 'setmenu',
       menu_id: isMenu ? (params.menu_id ?? null) : null,
       set_menu_id: !isMenu ? (params.set_menu_id ?? null) : null,
       quantity: params.quantity,
     };
 
-    const res = await instance.post("/api/v3/django/cart/", body, {
-      headers: { "Booth-ID": boothId },
+    const res = await instance.post('/api/v3/django/cart/', body, {
+      headers: { 'Booth-ID': boothId },
     });
     return res.data;
   },
@@ -87,17 +88,17 @@ export const cartApiV3 = {
     const boothId = getBoothId();
     const tableUsageId = getTableUsageId();
     if (!boothId || !tableUsageId) {
-      throw new Error("booth_id 또는 table_usage_id 없음");
+      throw new Error('booth_id 또는 table_usage_id 없음');
     }
 
     const res = await instance.patch(
-      "/api/v3/django/cart/menu/",
+      '/api/v3/django/cart/menu/',
       {
         table_usage_id: tableUsageId,
         cart_item_id: cartItemId,
         quantity,
       },
-      { headers: { "Booth-ID": boothId } }
+      { headers: { 'Booth-ID': boothId } },
     );
     return res.data;
   },
@@ -111,11 +112,11 @@ export const cartApiV3 = {
     const boothId = getBoothId();
     const tableUsageId = getTableUsageId();
     if (!boothId || !tableUsageId) {
-      throw new Error("booth_id 또는 table_usage_id 없음");
+      throw new Error('booth_id 또는 table_usage_id 없음');
     }
 
-    const res = await instance.delete("/api/v3/django/cart/menu/delete/", {
-      headers: { "Booth-ID": boothId },
+    const res = await instance.delete('/api/v3/django/cart/menu/delete/', {
+      headers: { 'Booth-ID': boothId },
       data: {
         table_usage_id: tableUsageId,
         cart_item_id: cartItemId,
@@ -132,15 +133,16 @@ export const cartApiV3 = {
   applyCoupon: async (couponCode: string) => {
     const boothId = getBoothId();
     const tableUsageId = getTableUsageId();
-    if (!boothId || !tableUsageId) throw new Error("booth_id 또는 table_usage_id 없음");
+    if (!boothId || !tableUsageId)
+      throw new Error('booth_id 또는 table_usage_id 없음');
 
     const res = await instance.post(
-      "/api/v3/django/coupon/apply-coupon/",
+      '/api/v3/django/coupon/apply-coupon/',
       {
         table_usage_id: tableUsageId,
         coupon_code: String(couponCode).trim(),
       },
-      { headers: { "Booth-ID": boothId } }
+      { headers: { 'Booth-ID': boothId } },
     );
     return res.data;
   },
@@ -153,14 +155,15 @@ export const cartApiV3 = {
   cancelCoupon: async () => {
     const boothId = getBoothId();
     const tableUsageId = getTableUsageId();
-    if (!boothId || !tableUsageId) throw new Error("booth_id 또는 table_usage_id 없음");
+    if (!boothId || !tableUsageId)
+      throw new Error('booth_id 또는 table_usage_id 없음');
 
     const res = await instance.post(
-      "/api/v3/django/coupon/apply-coupon/",
+      '/api/v3/django/coupon/apply-coupon/',
       {
         table_usage_id: tableUsageId,
       },
-      { headers: { "Booth-ID": boothId } }
+      { headers: { 'Booth-ID': boothId } },
     );
     return res.data;
   },
@@ -173,32 +176,80 @@ export const cartApiV3 = {
   getPaymentInfo: async () => {
     const boothId = getBoothId();
     const tableUsageId = getTableUsageId();
-    if (!boothId || !tableUsageId) throw new Error("booth_id 또는 table_usage_id 없음");
+    if (!boothId || !tableUsageId)
+      throw new Error('booth_id 또는 table_usage_id 없음');
 
     const res = await instance.post(
-      "/api/v3/django/cart/payment-info/",
+      '/api/v3/django/cart/payment-info/',
       { table_usage_id: tableUsageId },
-      { headers: { "Booth-ID": boothId } }
+      { headers: { 'Booth-ID': boothId } },
     );
     return res.data;
   },
 
   /**
-   * 송금 확인 요청 (직원 호출·주문 처리 트리거)
-   * POST /api/v3/django/cart/payment-request/
-   * body: { table_usage_id }
-   * ※ 백엔드 URL이 다르면 이 경로만 수정
+   * 직원 호출 생성 (공통)
+   * POST /api/v3/spring/server/staffcall/request
+   * 응답: subscribe_token + data(staff_call_id 등)
    */
-  requestPaymentConfirmation: async () => {
+  staffCallRequest: async (params: {
+    tableId: number;
+    cartId: number;
+    callType: string;
+    category?: 'GENERAL' | 'SERVING';
+  }) => {
     const boothId = getBoothId();
-    const tableUsageId = getTableUsageId();
-    if (!boothId || !tableUsageId) throw new Error("booth_id 또는 table_usage_id 없음");
+    if (!boothId) throw new Error('Booth-ID가 없습니다.');
+
+    const { tableId, cartId, callType, category = 'GENERAL' } = params;
+    if (!Number.isFinite(tableId) || !Number.isFinite(cartId)) {
+      throw new Error('table_id 또는 cart_id가 유효하지 않습니다.');
+    }
+    if (!callType?.trim()) {
+      throw new Error('call_type이 필요합니다.');
+    }
 
     const res = await instance.post(
-      "/api/v3/django/cart/payment-request/",
-      { table_usage_id: tableUsageId },
-      { headers: { "Booth-ID": boothId } }
+      '/api/v3/spring/server/staffcall/request',
+      {
+        tableId,
+        cartId,
+        callType,
+        category,
+      },
+      { headers: { 'Booth-ID': boothId } },
     );
+
     return res.data;
+  },
+
+  /**
+   * 송금 확인 요청 (직원 호출·주문 처리 트리거)
+   * POST /api/v3/spring/server/staffcall/request
+   */
+  requestPaymentConfirmation: async (params: {
+    tableId: number;
+    cartId: number;
+    category?: 'GENERAL' | 'SERVING';
+  }) => {
+    return cartApiV3.staffCallRequest({
+      ...params,
+      callType: 'PAYMENT_CONFIRM',
+    });
+  },
+
+  /**
+   * 메뉴 등에서 일반 직원 호출 (물/직원 등)
+   * POST /api/v3/spring/server/staffcall/request
+   */
+  requestGeneralStaffCall: async (params: {
+    tableId: number;
+    cartId: number;
+    category?: 'GENERAL' | 'SERVING';
+  }) => {
+    return cartApiV3.staffCallRequest({
+      ...params,
+      callType: 'STAFF_CALL',
+    });
   },
 };

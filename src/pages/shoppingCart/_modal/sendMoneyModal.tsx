@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import copy from '@assets/icons/copy.svg';
+import { toast } from 'react-toastify';
 
 interface TotalAccount {
   depositor: string;
@@ -9,6 +10,15 @@ interface TotalAccount {
 }
 
 type Step = 'account' | 'confirm' | 'staffComing';
+
+const STAFFCALL_ACCEPT_TIMEOUT_MS = 90_000;
+
+function getWsBaseUrl(): string {
+  const base = (import.meta.env.VITE_BASE_URL ?? '').replace(/\/+$/, '');
+  if (base.startsWith('https://')) return base.replace('https://', 'wss://');
+  if (base.startsWith('http://')) return base.replace('http://', 'ws://');
+  return base;
+}
 
 const SendMoneyModal = ({
   canclePay,
@@ -21,7 +31,6 @@ const SendMoneyModal = ({
   onRetryLoadAccount,
   usingCoupon: _usingCoupon,
   onRequestTransferConfirmation,
-  onAfterStaffRequest,
 }: {
   canclePay: () => void;
   pay: (totalPrice: number, code: string) => void;
@@ -37,17 +46,103 @@ const SendMoneyModal = ({
   onRetryLoadAccount: () => void;
   usingCoupon: string;
   /** 「송금 확인 요청」 시 서버에 직원 호출·주문 처리 요청 */
-  onRequestTransferConfirmation?: () => Promise<void>;
-  /** 사용자가 주문 완료 화면으로 이동할 때 */
-  onAfterStaffRequest?: () => void;
+  onRequestTransferConfirmation?: () => Promise<{
+    data?: { staff_call_id?: number; subscribe_token?: string };
+    staff_call_id?: number;
+    subscribe_token?: string;
+  }>;
 }) => {
   const [step, setStep] = useState<Step>('account');
   const [confirmSubmitting, setConfirmSubmitting] = useState(false);
   const [confirmError, setConfirmError] = useState<string | null>(null);
+  const [staffcallWaiting, setStaffcallWaiting] = useState(false);
+
+  const wsRef = useRef<WebSocket | null>(null);
+  const acceptTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [staffCallId, setStaffCallId] = useState<number | null>(null);
+  const [subscribeToken, setSubscribeToken] = useState<string | null>(null);
 
   useEffect(() => {
     if (accountInfo) setStep('account');
   }, [accountInfo]);
+
+  useEffect(() => {
+    if (!staffcallWaiting) return;
+    if (!staffCallId || !subscribeToken) return;
+
+    const wsUrl = `${getWsBaseUrl()}/ws/customer/staffcall`;
+    const ws = new WebSocket(wsUrl);
+    wsRef.current = ws;
+
+    const cleanupTimers = () => {
+      if (acceptTimeoutRef.current) {
+        clearTimeout(acceptTimeoutRef.current);
+        acceptTimeoutRef.current = null;
+      }
+    };
+
+    acceptTimeoutRef.current = setTimeout(() => {
+      toast.error('직원이 아직 응답하지 않았어요. 잠시 후 다시 시도해 주세요.');
+      setStaffcallWaiting(false);
+      cleanupTimers();
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
+      }
+    }, STAFFCALL_ACCEPT_TIMEOUT_MS);
+
+    ws.onopen = () => {
+      ws.send(
+        JSON.stringify({
+          type: 'SUBSCRIBE',
+          staff_call_id: staffCallId,
+          subscribe_token: subscribeToken,
+        }),
+      );
+    };
+
+    ws.onmessage = (evt) => {
+      try {
+        const msg = JSON.parse(String(evt.data)) as Record<string, unknown>;
+        if (msg?.type === 'STAFF_CALL_STATUS') {
+          const status = String(msg.status ?? '').toUpperCase();
+          if (status === 'ACCEPTED') {
+            cleanupTimers();
+            if (wsRef.current) {
+              wsRef.current.close();
+              wsRef.current = null;
+            }
+            setStaffcallWaiting(false);
+            setStep('staffComing');
+          }
+        }
+        if (msg?.type === 'ERROR') {
+          cleanupTimers();
+          toast.error('요청에 실패했어요. 다시 시도해 주세요.');
+          setStaffcallWaiting(false);
+          if (wsRef.current) {
+            wsRef.current.close();
+            wsRef.current = null;
+          }
+        }
+      } catch {
+        // ignore parse error
+      }
+    };
+
+    ws.onclose = () => {
+      wsRef.current = null;
+      cleanupTimers();
+    };
+
+    return () => {
+      cleanupTimers();
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
+      }
+    };
+  }, [staffcallWaiting, staffCallId, subscribeToken]);
 
   if (paymentLoading) {
     return (
@@ -97,9 +192,22 @@ const SendMoneyModal = ({
     setConfirmSubmitting(true);
     try {
       if (onRequestTransferConfirmation) {
-        await onRequestTransferConfirmation();
+        const res = await onRequestTransferConfirmation();
+        const id =
+          (res as any)?.data?.staff_call_id ??
+          (res as any)?.staff_call_id ??
+          (res as any)?.data?.data?.staff_call_id;
+        const token =
+          (res as any)?.subscribe_token ??
+          (res as any)?.data?.subscribe_token ??
+          (res as any)?.data?.data?.subscribe_token;
+        if (typeof id !== 'number' || !token) {
+          throw new Error('호출 정보가 올바르지 않습니다.');
+        }
+        setStaffCallId(id);
+        setSubscribeToken(String(token));
       }
-      setStep('staffComing');
+      setStaffcallWaiting(true);
     } catch (e: unknown) {
       const msg =
         (e as { response?: { data?: { message?: string } } })?.response?.data
@@ -110,11 +218,6 @@ const SendMoneyModal = ({
     } finally {
       setConfirmSubmitting(false);
     }
-  };
-
-  const handleGoOrderComplete = () => {
-    canclePay();
-    onAfterStaffRequest?.();
   };
 
   // 1) 계좌 안내
@@ -169,24 +272,25 @@ const SendMoneyModal = ({
         <ModalConfirm>
           <button
             type="button"
-            disabled={confirmSubmitting}
+            disabled={confirmSubmitting || staffcallWaiting}
             onClick={() => setStep('account')}
           >
             취소
           </button>
           <button
             type="button"
-            disabled={confirmSubmitting}
+            disabled={confirmSubmitting || staffcallWaiting}
             onClick={() => void handleRequestConfirm()}
           >
-            {confirmSubmitting ? '요청 중…' : '송금 확인 요청'}
+            {confirmSubmitting || staffcallWaiting
+              ? '요청 중…'
+              : '송금 확인 요청'}
           </button>
         </ModalConfirm>
       </ModalContainer>
     );
   }
 
-  // 3) 직원 이동 중
   return (
     <ModalContainer $narrow>
       <StaffComingBody>
@@ -194,11 +298,6 @@ const SendMoneyModal = ({
         <p>직원이 이동 중입니다.</p>
         <p className="highlight">직원이 오면 송금 완료 화면을 보여주세요.</p>
       </StaffComingBody>
-      <StaffComingFooter>
-        <button type="button" onClick={handleGoOrderComplete}>
-          주문 완료 화면으로
-        </button>
-      </StaffComingFooter>
     </ModalContainer>
   );
 };
@@ -286,19 +385,6 @@ const StaffComingBody = styled.div`
   p.highlight {
     color: ${({ theme }) => theme.colors.Orange01};
     ${({ theme }) => theme.fonts.SemiBold14}
-  }
-`;
-
-const StaffComingFooter = styled.div`
-  display: flex;
-  justify-content: center;
-  padding: 0 1rem 1.25rem;
-  border-top: 1px solid #c0c0c0;
-  button {
-    width: 100%;
-    padding: 1rem;
-    color: ${({ theme }) => theme.colors.Orange01};
-    ${({ theme }) => theme.fonts.SemiBold16};
   }
 `;
 
