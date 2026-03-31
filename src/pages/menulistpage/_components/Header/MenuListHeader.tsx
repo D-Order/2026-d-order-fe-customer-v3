@@ -1,5 +1,6 @@
 import * as S from './MenuListHeader.styled';
-import { useState } from 'react';
+import * as ToastS from '../modals/MenuAssignModal/MenuAssignModal.styled';
+import { useState, useEffect } from 'react';
 import { MENULISTPAGE_CONSTANTS } from '../../_constants/menulistpageconstants';
 import alram from '../../../../assets/icons/alram.svg';
 import CallModal from '../modals/callmodal/CallModal';
@@ -16,7 +17,13 @@ const MenuListHeader = ({
   cartCount,
 }: MenuListHeaderProps) => {
   const [ismodalOpen, setIsModalOpen] = useState(false);
-  const tableNum = Number(localStorage.getItem('tableNum'));
+  const [noticeMessage, setNoticeMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!noticeMessage) return;
+    const t = setTimeout(() => setNoticeMessage(null), 2000);
+    return () => clearTimeout(t);
+  }, [noticeMessage]);
 
   return (
     <S.Wrapper>
@@ -38,8 +45,20 @@ const MenuListHeader = ({
           {cartCount && <S.Badge />}
         </S.IconWrap>
       </S.Icons>
+      {noticeMessage && (
+        <ToastS.Toast style={{ zIndex: 100 }}>
+          <ToastS.ToastIcon
+            src={MENULISTPAGE_CONSTANTS.ASSIGNMODAL.IMAGES.NOTICE}
+            alt=""
+          />
+          {noticeMessage}
+        </ToastS.Toast>
+      )}
       {ismodalOpen && (
-        <CallModal onClose={() => setIsModalOpen(false)} tableNum={tableNum} />
+        <CallModal
+          onClose={() => setIsModalOpen(false)}
+          onNotify={setNoticeMessage}
+        />
       )}
     </S.Wrapper>
   );
