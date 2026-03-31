@@ -266,8 +266,18 @@ const useShoppingCartPage = () => {
 
   /** 송금 확인 요청 — 직원 호출용 API (모달 2단계에서 호출) */
   const requestPaymentConfirmation = useCallback(async () => {
-    await cartApiV3.requestPaymentConfirmation();
-  }, []);
+    const tableId = snapshot?.table_usage?.table_id;
+    const cartId = snapshot?.cart?.id;
+    if (tableId == null || cartId == null) {
+      throw new Error('테이블 또는 장바구니 정보가 없습니다.');
+    }
+
+    return await cartApiV3.requestPaymentConfirmation({
+      tableId,
+      cartId,
+      category: 'GENERAL',
+    });
+  }, [snapshot?.table_usage?.table_id, snapshot?.cart?.id]);
 
   return {
     shoppingItemResponse,

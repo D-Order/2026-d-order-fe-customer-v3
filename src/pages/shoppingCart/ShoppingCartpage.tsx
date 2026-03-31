@@ -153,7 +153,6 @@ const ShoppingCartPage = () => {
             }}
             usingCoupon={usingCoupon}
             onRequestTransferConfirmation={requestPaymentConfirmation}
-            onAfterStaffRequest={() => navigate(ROUTE_CONSTANTS.ORDERCOMPLETE)}
           />
         </S.DarkWrapper>
       )}
