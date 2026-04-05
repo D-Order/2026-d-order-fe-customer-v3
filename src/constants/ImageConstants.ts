@@ -1,11 +1,12 @@
 import Notice from '../assets/icons/notice.svg';
-import Character from '../assets/images/character.svg';
+import Character from '../assets/images/characterV3.svg';
+import CharacterMini from '../assets/images/characterMiniV3.svg';
 import Logo from '../assets/icons/Logo.svg';
 import Cart from '../assets/icons/cart.svg';
 import Receipt from '../assets/icons/receipt.svg';
 import Check from '../assets/icons/check.svg';
 import Loading from '../assets/icons/loadingSpinner.svg';
-import LogoPng from '../assets/icons/Logo.png';
+import LogoPng from '../assets/images/logoV3.svg';
 import backIcon from '@assets/icons/left.svg';
 import CouponIcon from '@assets/icons/Currency.svg';
 import CoponIconPercent from '@assets/icons/currencyPercent.png';
@@ -23,6 +24,7 @@ import Reload from '@assets/icons/reload.svg';
 export const IMAGE_CONSTANTS = {
   Notice: Notice,
   CHARACTER: Character,
+  CHARACTERMINI: CharacterMini,
   LOGO: Logo,
   CART: Cart,
   RECEIPT: Receipt,

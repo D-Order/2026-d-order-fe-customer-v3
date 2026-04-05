@@ -87,7 +87,7 @@
 //         </S.OrderListWrapper>
 //       </S.PageWrapper>
 //     </S.Wrapper>
-      
+
 //     </>
 //   );
 // };
@@ -96,16 +96,16 @@
 
 // 목업 데이터 연결~~
 // src/pages/orderList/OrderListPage.tsx
-import * as S from "./OrderListPage.styled";
-import { useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
-import OrderListHeader from "./_components/OrderListHeader";
-import OrderListItems from "./_components/OrderListItems";
-import ACCO from "@assets/images/character.svg";
-import { ROUTE_CONSTANTS } from "@constants/RouteConstants";
-import { useOrderList } from "./hooks/useOrderList";
-import EmptyOrder from "./_components/EmptyOrder";
-import Loading from "@components/loading/Loading";
+import * as S from './OrderListPage.styled';
+import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import OrderListHeader from './_components/OrderListHeader';
+import OrderListItems from './_components/OrderListItems';
+import ACCO from '@assets/images/characterV3.svg';
+import { ROUTE_CONSTANTS } from '@constants/RouteConstants';
+import { useOrderList } from './hooks/useOrderList';
+import EmptyOrder from './_components/EmptyOrder';
+import Loading from '@components/loading/Loading';
 
 interface OrderItem {
   id: number;
@@ -117,13 +117,13 @@ interface OrderItem {
 
 const OrderListPage = () => {
   const navigate = useNavigate();
-  const tableUsageId = Number(localStorage.getItem("tableUsageId") || 0);
+  const tableUsageId = Number(localStorage.getItem('tableUsageId') || 0);
 
   const { orderData, loading, error } = useOrderList(tableUsageId);
   const [orderList, setOrderList] = useState<OrderItem[]>([]);
 
   useEffect(() => {
-    if (orderData?.status === "success" && orderData.data) {
+    if (orderData?.status === 'success' && orderData.data) {
       const mapped: OrderItem[] = orderData.data.orders.map((item) => ({
         id: item.id,
         name: item.name,
@@ -147,7 +147,7 @@ const OrderListPage = () => {
     <S.Wrapper>
       <S.HeaderWrapper>
         <OrderListHeader
-          text="주문내역"
+          text='주문내역'
           goBack={() => navigate(ROUTE_CONSTANTS.MENULIST)}
           totalPrice={totalPrice}
         />
