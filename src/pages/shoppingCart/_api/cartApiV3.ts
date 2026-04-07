@@ -51,10 +51,10 @@ export const cartApiV3 = {
   /**
    * 장바구니 담기
    * POST /api/v3/django/cart/
-   * body: { table_usage_id, type: "menu"|"setmenu", menu_id, set_menu_id, quantity }
+   * body: { table_usage_id, type: "menu"|"fee"|"setmenu", menu_id, set_menu_id, quantity }
    */
   add: async (params: {
-    type: 'menu' | 'set_menu';
+    type: 'menu' | 'fee' | 'setmenu';
     menu_id?: number;
     set_menu_id?: number;
     quantity: number;
@@ -64,14 +64,39 @@ export const cartApiV3 = {
     if (!tableUsageId || !boothId)
       throw new Error('table_usage_id 또는 booth_id 없음');
 
-    const isMenu = params.type === 'menu';
-    const body = {
-      table_usage_id: tableUsageId,
-      type: isMenu ? 'menu' : 'setmenu',
-      menu_id: isMenu ? (params.menu_id ?? null) : null,
-      set_menu_id: !isMenu ? (params.set_menu_id ?? null) : null,
-      quantity: params.quantity,
-    };
+    const { type, quantity } = params;
+
+    const body =
+      type === 'setmenu'
+        ? {
+            table_usage_id: tableUsageId,
+            type: 'setmenu' as const,
+            menu_id: null,
+            set_menu_id: params.set_menu_id ?? null,
+            quantity,
+          }
+        : type === 'fee'
+          ? {
+              table_usage_id: tableUsageId,
+              type: 'fee' as const,
+              menu_id: params.menu_id ?? null,
+              set_menu_id: null,
+              quantity,
+            }
+          : {
+              table_usage_id: tableUsageId,
+              type: 'menu' as const,
+              menu_id: params.menu_id ?? null,
+              set_menu_id: null,
+              quantity,
+            };
+
+    if (type === 'setmenu' && body.set_menu_id == null) {
+      throw new Error('set_menu_id가 필요합니다.');
+    }
+    if ((type === 'menu' || type === 'fee') && body.menu_id == null) {
+      throw new Error('menu_id가 필요합니다.');
+    }
 
     const res = await instance.post('/api/v3/django/cart/', body, {
       headers: { 'Booth-ID': boothId },

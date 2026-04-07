@@ -115,7 +115,7 @@ const useShoppingCartPage = () => {
   const menusFromSnapshot = useMemo(
     () =>
       (snapshot?.items ?? [])
-        .filter((i) => i.type === 'menu')
+        .filter((i) => i.type === 'menu' || i.type === 'fee')
         .map(cartItemToMenu),
     [snapshot?.items],
   );
