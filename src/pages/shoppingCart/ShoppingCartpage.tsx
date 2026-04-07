@@ -4,7 +4,7 @@ import { ROUTE_CONSTANTS } from '@constants/RouteConstants';
 import { IMAGE_CONSTANTS } from '@constants/ImageConstants';
 import { toast } from 'react-toastify';
 import ShoppingHeader from './_components/ShoppingHeader';
-import Character from '@assets/images/character.svg';
+import Character from '@assets/images/characterV3.svg';
 import ShoppingItem from './_components/ShoppingItem';
 import ShoppingFooter from './_components/ShoppingFooter';
 import ConfirmModal from './_modal/ConfitmMotal';
@@ -84,7 +84,7 @@ const ShoppingCartPage = () => {
   return (
     <S.Wrapper>
       <ShoppingHeader
-        text="장바구니"
+        text='장바구니'
         goBack={() => {
           navigate(ROUTE_CONSTANTS.MENULIST);
         }}
@@ -92,7 +92,7 @@ const ShoppingCartPage = () => {
 
       {menus.length === 0 && setMenus.length === 0 ? (
         <S.ShoppingListEmpty>
-          <img src={Character} alt="이미지" />
+          <img src={Character} alt='이미지' />
           <p>아직 장바구니에 담긴 메뉴가 없어요.</p>
         </S.ShoppingListEmpty>
       ) : (
