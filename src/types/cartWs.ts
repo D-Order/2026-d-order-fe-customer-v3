@@ -43,7 +43,7 @@ export interface CartInfo {
 
 export interface CartItem {
   id: number;
-  type: "menu" | "setmenu";
+  type: "menu" | "fee" | "setmenu";
   menu_id: number | null;
   set_menu_id: number | null;
   name: string;

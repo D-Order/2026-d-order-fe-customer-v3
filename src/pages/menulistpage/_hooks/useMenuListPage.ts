@@ -270,14 +270,17 @@ const useMenuListPage = () => {
     }
     if (count <= 0) return;
 
-    const type: 'menu' | 'set_menu' =
-      selectedItem.category === 'set' ? 'set_menu' : 'menu';
-
     try {
       await cartApiV3.add({
-        type,
-        menu_id: type === 'menu' ? selectedItem.id : undefined,
-        set_menu_id: type === 'set_menu' ? selectedItem.id : undefined,
+        type:
+          selectedItem.category === 'set'
+            ? 'setmenu'
+            : selectedItem.category === 'tableFee'
+              ? 'fee'
+              : 'menu',
+        ...(selectedItem.category === 'set'
+          ? { set_menu_id: selectedItem.id }
+          : { menu_id: selectedItem.id }),
         quantity: count,
       });
 
