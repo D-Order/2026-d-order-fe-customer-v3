@@ -136,6 +136,24 @@ const useShoppingCartPage = () => {
   const cartStatus = String(snapshot?.cart?.status ?? '').toLowerCase();
   const isOrderable = cartStatus === 'active';
 
+  // 디버깅: snapshot/cartStatus 변화 추적
+  useEffect(() => {
+    console.log('[ShoppingCart] 📦 snapshot 변경:', {
+      cartStatus,
+      isOrderable,
+      cartId: snapshot?.cart?.id,
+      itemCount: snapshot?.items?.length,
+      total: snapshot?.summary?.total,
+    });
+  }, [snapshot]);
+
+  // 결제 확인 완료 시 주문완료 페이지로 이동
+  useEffect(() => {
+    if (cartStatus === 'ordered') {
+      navigate(ROUTE_CONSTANTS.ORDERCOMPLETE);
+    }
+  }, [cartStatus, navigate]);
+
   const shoppingItemResponse = useMemo(() => {
     if (!snapshot) return undefined;
     return {
@@ -272,11 +290,14 @@ const useShoppingCartPage = () => {
       throw new Error('테이블 또는 장바구니 정보가 없습니다.');
     }
 
-    return await cartApiV3.requestPaymentConfirmation({
+    console.log('[ShoppingCart] 💳 결제 확인 요청:', { tableId, cartId });
+    const result = await cartApiV3.requestPaymentConfirmation({
       tableId,
       cartId,
       category: 'GENERAL',
     });
+    console.log('[ShoppingCart] 💳 결제 확인 응답:', result);
+    return result;
   }, [snapshot?.table_usage?.table_id, snapshot?.cart?.id]);
 
   return {

@@ -7,16 +7,25 @@ import { useEffect } from 'react';
 import fireWork from '@assets/lottie/fireworks.json';
 import { IMAGE_CONSTANTS } from '@constants/ImageConstants';
 import { ROUTE_CONSTANTS } from '@constants/RouteConstants';
-import { useShoppingCartStore } from '@stores/shoppingCartStore';
+import { useCartSnapshotStore } from '@stores/cartSnapshotStore';
+import { cartApiV3 } from '../shoppingCart/_api/cartApiV3';
 
 const OrderCompletePage = () => {
   const navigate = useNavigate();
-  const clearCart = useShoppingCartStore((state) => state.clearCart);
+  const setSnapshot = useCartSnapshotStore((s) => s.setSnapshot);
 
-  // 페이지 로드 시 장바구니 초기화
+  // 주문 완료 시 백엔드 cart reset 호출 → ACTIVE(round+1)로 전환
   useEffect(() => {
-    clearCart(); // 장바구니 비우기
-  }, [clearCart]);
+    cartApiV3.reset()
+      .then(() => {
+        console.log('[OrderComplete] 장바구니 reset 성공');
+        setSnapshot(null);
+      })
+      .catch((err) => {
+        console.error('[OrderComplete] 장바구니 reset 실패:', err);
+        setSnapshot(null);
+      });
+  }, [setSnapshot]);
 
   return (
     <S.Wrapper>

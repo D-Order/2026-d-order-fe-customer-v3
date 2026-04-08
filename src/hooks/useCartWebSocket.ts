@@ -37,23 +37,32 @@ export function useCartWebSocket(tableUsageId: string | null) {
       wsRef.current = ws;
 
       ws.onopen = () => {
+        console.log('[CartWS] ✅ 연결됨:', wsUrl);
         reconnectAttempts.current = 0;
       };
 
       ws.onmessage = (event: MessageEvent) => {
         try {
           const payload = JSON.parse(event.data as string) as CartWsPayload;
+          console.log('[CartWS] 📩 메시지 수신:', {
+            type: payload?.type,
+            cartStatus: payload?.data?.cart?.status,
+            message: payload?.message,
+            data: payload?.data,
+          });
           if (payload?.data && typeof payload.data === "object") {
             setSnapshot(payload.data as CartSnapshotData);
           }
-        } catch {
-          // ignore parse error
+        } catch (err) {
+          console.error('[CartWS] ❌ 파싱 에러:', err, event.data);
         }
       };
 
       ws.onclose = (e) => {
+        console.log('[CartWS] 🔌 연결 종료:', { code: e.code, reason: e.reason });
         wsRef.current = null;
         if (e.code === AUTH_FAILURE_CLOSE_CODE) {
+          console.warn('[CartWS] ⚠️ 인증 실패로 종료 (4001)');
           setSnapshot(null);
           return;
         }
@@ -66,8 +75,8 @@ export function useCartWebSocket(tableUsageId: string | null) {
         }
       };
 
-      ws.onerror = () => {
-        // onclose에서 정리
+      ws.onerror = (err) => {
+        console.error('[CartWS] ❌ 에러 발생:', err);
       };
     };
 
