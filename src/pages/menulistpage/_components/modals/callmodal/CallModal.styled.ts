@@ -40,13 +40,12 @@ export const Box1 = styled.div`
 export const Box2 = styled.div`
   display: flex;
   flex-direction: row;
-  border-top: 0.3px solid ${({ theme }) => theme.colors.Black02};
+  border-top: 1px solid ${({ theme }) => theme.colors.Black02};
 `;
 
 export const Button1 = styled.div`
   ${({ theme }) => theme.fonts.Bold12};
   color: ${({ theme }) => theme.colors.Orange01};
-  border-right: 0.15px solid ${({ theme }) => theme.colors.Black02};
 
   display: flex;
   justify-content: center;
@@ -59,7 +58,7 @@ export const Button1 = styled.div`
 export const Button2 = styled.div`
   ${({ theme }) => theme.fonts.Bold12};
   color: ${({ theme }) => theme.colors.Orange01};
-  border-left: 0.15px solid ${({ theme }) => theme.colors.Black02};
+  border-left: 1px solid ${({ theme }) => theme.colors.Black02};
 
   display: flex;
   justify-content: center;

@@ -29,7 +29,7 @@ export const Wrapper = styled.div`
   width: 100%;
   min-height: calc(var(--vh, 1vh) * 100);
 
-  background-color: ${({ theme }) => theme.colors.Orange02};
+  background-color: ${({ theme }) => theme.colors.Orange00};
 
   padding-bottom: 100px;
   box-sizing: border-box;
