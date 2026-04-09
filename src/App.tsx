@@ -24,6 +24,7 @@ function App() {
         position="top-center"
         autoClose={3000}
         hideProgressBar={true}
+        style={{ padding: "1rem" }}
       />
     </>
   );

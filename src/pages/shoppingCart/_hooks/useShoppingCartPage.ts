@@ -1,328 +1,304 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { ROUTE_CONSTANTS } from "@constants/RouteConstants";
-import { accountInfoType, Menu } from "../types/types";
-import { instance } from "@services/instance";
-import { ShoppingItemResponseType } from "../types/types";
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ROUTE_CONSTANTS } from '@constants/RouteConstants';
+import { accountInfoType, Menu } from '../types/types';
+import { useCartSnapshotStore } from '@stores/cartSnapshotStore';
+import { cartApiV3 } from '../_api/cartApiV3';
+import type { CartItem } from '../../../types/cartWs';
+
+function extractAccountFromObject(
+  o: Record<string, unknown>,
+): accountInfoType | null {
+  const holder =
+    o.account_holder ?? o.depositor ?? o.account_holder_name ?? o.name;
+  const bank = o.bank_name ?? o.bank;
+  const accountNum = o.account_number ?? o.account ?? o.account_num ?? o.number;
+
+  const account_holder = holder != null ? String(holder).trim() : '';
+  const bank_name = bank != null ? String(bank).trim() : '';
+  const account_number = accountNum != null ? String(accountNum).trim() : '';
+
+  if (!account_holder && !account_number) return null;
+  return { account_holder, bank_name, account_number };
+}
+
+/** payment-info 응답: data 래핑·중첩·payment_info 등 */
+function parsePaymentInfoResponse(response: unknown): accountInfoType | null {
+  if (response == null || typeof response !== 'object') return null;
+  const root = response as Record<string, unknown>;
+  const dataObj = root.data as Record<string, unknown> | undefined;
+  const candidates: unknown[] = [
+    root,
+    root.data,
+    dataObj?.data,
+    /** API: { data: { payment: { depositor, bank_name, account } } } */
+    dataObj?.payment,
+    dataObj?.payment_info,
+    root.payment_info,
+    root.payment,
+    root.account,
+  ];
+
+  for (const cur of candidates) {
+    if (!cur || typeof cur !== 'object') continue;
+    const hit = extractAccountFromObject(cur as Record<string, unknown>);
+    if (hit) return hit;
+  }
+
+  return null;
+}
+
+/** v3 CartItem → 장바구니 UI용 Menu 형태로 변환 */
+function cartItemToMenu(item: CartItem): Menu {
+  return {
+    id: item.id,
+    is_soldout: item.is_sold_out,
+    menu_amount: 99,
+    menu_name: item.name,
+    menu_price: item.unit_price,
+    min_menu_amount: 1,
+    discounted_price: item.unit_price,
+    original_price: item.unit_price,
+    quantity: item.quantity,
+  };
+}
 
 const useShoppingCartPage = () => {
-  const [shoppingItemResponse, setShoppingItemResponse] = useState<
-    ShoppingItemResponseType | undefined
-  >();
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [accountInfo, setAccountInfo] = useState<accountInfoType | null>(null);
   const navigate = useNavigate();
+  const snapshot = useCartSnapshotStore((s) => s.snapshot);
+  const setSnapshot = useCartSnapshotStore((s) => s.setSnapshot);
+
+  /** GET /api/v3/django/cart/detail/ 로 스냅샷 동기화 */
+  const refreshCartFromDetail = useCallback(async () => {
+    try {
+      const snap = await cartApiV3.getDetail();
+      if (snap) setSnapshot(snap);
+    } catch (e) {
+      console.error('[cart/detail]', e);
+    }
+  }, [setSnapshot]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const snap = await cartApiV3.getDetail();
+        if (cancelled) return;
+        if (snap) setSnapshot(snap);
+      } catch (e) {
+        if (!cancelled) console.error('[cart/detail] mount', e);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [setSnapshot]);
+
+  const [errorMessage] = useState<string | null>(null);
+  const [accountInfo, setAccountInfo] = useState<accountInfoType | null>(null);
   const [isConfirmModal, setisConfirmModal] = useState<boolean>(false);
   const [isSendMoneyModal, setIsSendMoneyModal] = useState<boolean>(false);
-
-  const [isCouponModal, setIsCouponModal] = useState<boolean>(false);
-  const [totalPrice, setTotalPrice] = useState<number>(0);
-  const [originalPrice, setOriginalPrice] = useState<number>(0);
-  const [discountAmount, setDiscountAmount] = useState<number>(0);
-  const [discountType, setDiscountType] = useState<string>();
-  const [couponName, setCounponName] = useState<string>();
-  const [appliedCoupon, setAppliedCoupon] = useState<boolean>(false);
-  const [appliedCouponCode, setAppliedCouponCode] = useState<string | null>(
-    null
+  /** 입금 모달 안에서만 사용 (주문하기 직후 모달 먼저 띄우고 로딩) */
+  const [paymentModalLoading, setPaymentModalLoading] = useState(false);
+  const [paymentModalError, setPaymentModalError] = useState<string | null>(
+    null,
   );
-  const boothId = localStorage.getItem("boothId");
-  const table_num = localStorage.getItem("tableNum");
-  const cart_id = localStorage.getItem("cartId");
+  const [isCouponModal, setIsCouponModal] = useState<boolean>(false);
+  const [appliedCouponCode, setAppliedCouponCode] = useState<string | null>(
+    null,
+  );
 
-  // 장바구니 조회
-  const FetchShoppingItems = async () => {
-    try {
-      const response = await instance.get("api/v2/cart/detail", {
-        headers: {
-          "Booth-ID": boothId,
-        },
-        params: {
-          table_num,
-          cart_id,
-        },
-      });
-      const data = response.data;
-      setShoppingItemResponse(data);
-      //console.log("장바구니 담은 데이터", data);
-    } catch (err) {
-      console.log(err);
+  /** payment-info 중복 호출 방지(더블탭 등). 닫기 시 generation 올려서 늦게 도착한 응답 무시 */
+  const paymentInfoRequestId = useRef(0);
+  const paymentInfoInFlight = useRef(false);
+
+  const menusFromSnapshot = useMemo(
+    () =>
+      (snapshot?.items ?? [])
+        .filter((i) => i.type === 'menu' || i.type === 'fee')
+        .map(cartItemToMenu),
+    [snapshot?.items],
+  );
+  const setMenusFromSnapshot = useMemo(
+    () =>
+      (snapshot?.items ?? [])
+        .filter((i) => i.type === 'setmenu')
+        .map(cartItemToMenu),
+    [snapshot?.items],
+  );
+
+  const totalPrice = snapshot?.summary?.total ?? 0;
+  const originalPrice = snapshot?.summary?.subtotal ?? 0;
+  const appliedCoupon = snapshot?.coupon?.applied ?? false;
+  const couponName = snapshot?.coupon?.coupon_code ?? undefined;
+  const discountAmount = snapshot?.coupon?.discount_amount ?? 0;
+  const discountType = snapshot?.coupon?.discount_type ?? 'percent';
+  const cartStatus = String(snapshot?.cart?.status ?? '').toLowerCase();
+  const isOrderable = cartStatus === 'active';
+
+  // 디버깅: snapshot/cartStatus 변화 추적
+  useEffect(() => {
+    console.log('[ShoppingCart] 📦 snapshot 변경:', {
+      cartStatus,
+      isOrderable,
+      cartId: snapshot?.cart?.id,
+      itemCount: snapshot?.items?.length,
+      total: snapshot?.summary?.total,
+    });
+  }, [snapshot]);
+
+  // 결제 확인 완료 시 주문완료 페이지로 이동
+  useEffect(() => {
+    if (cartStatus === 'ordered') {
+      navigate(ROUTE_CONSTANTS.ORDERCOMPLETE);
     }
-  };
+  }, [cartStatus, navigate]);
 
-  // 총 주문금액 계산 함수
-  const calculateTotalPrice = (menus?: Menu[], setMenus?: Menu[]) => {
-    const menusTotal = (Array.isArray(menus) ? menus : []).reduce(
-      (total, item) => total + item.menu_price * item.quantity,
-      0
-    );
-    const setMenusTotal = (Array.isArray(setMenus) ? setMenus : []).reduce(
-      (total, item) => total + item.discounted_price * item.quantity,
-      0
-    );
-    return menusTotal + setMenusTotal;
-  };
-
-  // 공통: 메뉴/세트 구분
-  const getItemContext = (
-    id: number
-  ): { type: "menu" | "set_menu"; currentItem: Menu | undefined } => {
-    const currentMenu = shoppingItemResponse?.data?.cart?.menus?.find(
-      (item) => item.id === id
-    );
-    const currentSet = shoppingItemResponse?.data?.cart?.set_menus?.find(
-      (item: Menu) => item.id === id
-    );
-    if (currentSet) return { type: "set_menu", currentItem: currentSet };
-    return { type: "menu", currentItem: currentMenu };
-  };
-
-  // 공통: 수량 변경 API 호출
-  const patchShoppingItem = async (
-    id: number,
-    quantity: number,
-    type: "menu" | "set_menu"
-  ) => {
-    try {
-      await instance.patch(
-        `api/v2/cart/menu/`,
-        {
-          table_num,
-          type,
-          id,
-          quantity,
-          cart_id,
+  const shoppingItemResponse = useMemo(() => {
+    if (!snapshot) return undefined;
+    return {
+      data: {
+        cart: {
+          menus: menusFromSnapshot,
+          set_menus: setMenusFromSnapshot,
+          booth_id: snapshot.table_usage.booth_id,
+          id: snapshot.cart.id,
+          table_num: snapshot.table_usage.table_num,
         },
-        {
-          headers: {
-            "Booth-ID": boothId,
-          },
-        }
-      );
-    } catch (err) {
-      console.log(err);
-    }
+        subtotal: snapshot.summary.subtotal,
+        table_fee: 0,
+        total_price: snapshot.summary.total,
+      },
+    };
+  }, [snapshot, menusFromSnapshot, setMenusFromSnapshot]);
+
+  const FetchShoppingItems = () => {
+    void refreshCartFromDetail();
   };
 
-  // 수량 증가
   const increaseQuantity = async (id: number) => {
-    if (!shoppingItemResponse?.data?.cart) return;
-
-    const { type, currentItem } = getItemContext(id);
-    if (!currentItem) return;
-
-    // 테이블 이용료 메뉴는 수량 증가 막기
-    if (currentItem.menu_name === "테이블 이용료(테이블당)") {
-      return;
+    const item = snapshot?.items?.find((i) => i.id === id);
+    if (!item || item.quantity < 1) return;
+    try {
+      await cartApiV3.updateQuantity(id, item.quantity + 1);
+      await refreshCartFromDetail();
+    } catch (err) {
+      console.error(err);
     }
-
-    const newQuantity = currentItem.quantity + 1;
-
-    setShoppingItemResponse((prev) => {
-      if (!prev) return prev;
-      const updatedMenus = (prev.data.cart.menus || []).map((item) =>
-        item.id === id ? { ...item, quantity: newQuantity } : item
-      );
-      const updatedSets = (prev.data.cart.set_menus || []).map((item: Menu) =>
-        item.id === id ? { ...item, quantity: newQuantity } : item
-      );
-
-      return {
-        ...prev,
-        data: {
-          ...prev.data,
-          cart: {
-            ...prev.data.cart,
-            menus: type === "menu" ? updatedMenus : prev.data.cart.menus,
-            set_menus:
-              type === "set_menu" ? updatedSets : prev.data.cart.set_menus,
-          },
-        },
-      };
-    });
-
-    patchShoppingItem(id, newQuantity, type);
   };
 
-  // 수량 감소
   const decreaseQuantity = async (id: number) => {
-    if (!shoppingItemResponse?.data?.cart) return;
-
-    const { type, currentItem } = getItemContext(id);
-    if (!currentItem || currentItem.quantity <= 1) return;
-
-    const newQuantity = currentItem.quantity - 1;
-
-    setShoppingItemResponse((prev) => {
-      if (!prev) return prev;
-      const updatedMenus = (prev.data.cart.menus || []).map((item) =>
-        item.id === id ? { ...item, quantity: newQuantity } : item
-      );
-      const updatedSets = (prev.data.cart.set_menus || []).map((item: Menu) =>
-        item.id === id ? { ...item, quantity: newQuantity } : item
-      );
-
-      return {
-        ...prev,
-        data: {
-          ...prev.data,
-          cart: {
-            ...prev.data.cart,
-            menus: type === "menu" ? updatedMenus : prev.data.cart.menus,
-            set_menus:
-              type === "set_menu" ? updatedSets : prev.data.cart.set_menus,
-          },
-        },
-      };
-    });
-
-    patchShoppingItem(id, newQuantity, type);
-  };
-
-  // 상품 삭제
-  const deleteItem = async (id: number) => {
-    const { type } = getItemContext(id);
-
-    setShoppingItemResponse((prev) => {
-      if (!prev) return prev;
-      const updatedMenus = (prev.data.cart.menus || []).filter(
-        (item) => item.id !== id
-      );
-      const updatedSets = (prev.data.cart.set_menus || []).filter(
-        (item: Menu) => item.id !== id
-      );
-
-      return {
-        ...prev,
-        data: {
-          ...prev.data,
-          cart: {
-            ...prev.data.cart,
-            menus: type === "menu" ? updatedMenus : prev.data.cart.menus,
-            set_menus:
-              type === "set_menu" ? updatedSets : prev.data.cart.set_menus,
-          },
-        },
-      };
-    });
-
-    patchShoppingItem(id, 0, type);
-  };
-
-  //계좌 정보 관리
-  const CheckAccount = async () => {
+    const item = snapshot?.items?.find((i) => i.id === id);
+    if (!item || item.quantity <= 1) return;
     try {
-      const response = await instance.get("api/v2/cart/payment-info/", {
-        headers: {
-          "Booth-ID": boothId,
-        },
-        params: {
-          table_num,
-          cart_id,
-        },
-      });
-      setAccountInfo(response.data.data);
-    } catch (err: any) {
-      const errorMessage =
-        err?.response?.data?.message ||
-        err?.message ||
-        "알 수 없는 오류가 발생했습니다.";
-      setisConfirmModal(true);
-      setErrorMessage(errorMessage);
+      await cartApiV3.updateQuantity(id, item.quantity - 1);
+      await refreshCartFromDetail();
+    } catch (err) {
+      console.error(err);
     }
   };
 
-  // 상품 모달 관리
-  const CloseModal = () => {
-    setisConfirmModal(false);
-  };
-  const CloseAcoountModal = () => {
-    setIsSendMoneyModal(false);
-  };
-
-  // 계좌 페이지 이동
-  const Pay = async (price: number, code?: string) => {
+  const deleteItem = async (id: number) => {
     try {
-      await instance.post(
-        "api/v2/tables/call_staff/",
-        {
-          table_num,
-          cart_id,
-        },
-        {
-          headers: {
-            "Booth-ID": boothId,
-          },
-        }
-      );
-      // 쿠폰 코드가 없으면 바로 이동
-      if (!code || !code.trim()) {
-        setIsSendMoneyModal(false);
+      await cartApiV3.deleteItem(id);
+      await refreshCartFromDetail();
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
+  const CheckAccount = async () => {
+    if (!isOrderable) return;
+    if (paymentInfoInFlight.current) return;
+    paymentInfoInFlight.current = true;
+    const reqId = ++paymentInfoRequestId.current;
+
+    setIsSendMoneyModal(true);
+    setPaymentModalLoading(true);
+    setPaymentModalError(null);
+    setAccountInfo(null);
+    try {
+      const response = await cartApiV3.getPaymentInfo();
+      if (reqId !== paymentInfoRequestId.current) return;
+      const info = parsePaymentInfoResponse(response);
+      if (info) {
+        setAccountInfo(info);
         return;
       }
-
-      setIsSendMoneyModal(false);
-    } catch (err) {
-      console.log(err);
+      setPaymentModalError(
+        '계좌 정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.',
+      );
+    } catch (err: unknown) {
+      if (reqId !== paymentInfoRequestId.current) return;
+      const msg =
+        (err as { response?: { data?: { message?: string }; status?: number } })
+          ?.response?.data?.message ||
+        (err as Error)?.message ||
+        '알 수 없는 오류가 발생했습니다.';
+      setPaymentModalError(msg);
     } finally {
-      navigate(`${ROUTE_CONSTANTS.STAFFCODE}?code=${code}&price=${price}`);
-    }
-  };
-
-  // 쿠폰이 유효한지 확인
-  const CheckCoupon = async (code: string) => {
-    try {
-      const response = await instance.post(
-        "api/v2/cart/validate-coupon/",
-        {
-          coupon_code: code,
-        },
-        {
-          headers: {
-            "Booth-ID": boothId,
-          },
-        }
-      );
-
-      if (response.data) {
-        setOriginalPrice(totalPrice);
-        setDiscountAmount(response.data.data.discount_value);
-        setDiscountType(response.data.data.discount_type);
-        setCounponName(response.data.data.coupon_name);
-        setAppliedCoupon(true);
-        setAppliedCouponCode(code); // 사용자가 입력한 코드 그대로 저장
+      paymentInfoInFlight.current = false;
+      if (reqId === paymentInfoRequestId.current) {
+        setPaymentModalLoading(false);
       }
-
-      return response.data;
-    } catch (err: any) {
-      console.log("CheckCoupon 에러:", err);
-      throw new Error("해당 번호의 쿠폰이 존재하지 않아요!");
     }
   };
 
-  useEffect(() => {
-    if (!shoppingItemResponse) return;
-    const cart = shoppingItemResponse.data?.cart;
-    const base = calculateTotalPrice(cart?.menus, cart?.set_menus);
-    setOriginalPrice(base);
-  }, [shoppingItemResponse]);
+  const CloseModal = () => setisConfirmModal(false);
+  const CloseAcoountModal = () => {
+    paymentInfoRequestId.current += 1;
+    paymentInfoInFlight.current = false;
+    setIsSendMoneyModal(false);
+    setPaymentModalLoading(false);
+    setPaymentModalError(null);
+    setAccountInfo(null);
+  };
 
-  useEffect(() => {
-    if (!appliedCoupon) {
-      setTotalPrice(originalPrice);
-      return;
+  const Pay = (price: number, code?: string) => {
+    const cartId = snapshot?.cart?.id;
+    const params = new URLSearchParams();
+    if (code?.trim()) params.set('code', code.trim());
+    params.set('price', String(price));
+    if (cartId != null) params.set('cart_id', String(cartId));
+    paymentInfoRequestId.current += 1;
+    paymentInfoInFlight.current = false;
+    setIsSendMoneyModal(false);
+    setPaymentModalLoading(false);
+    setPaymentModalError(null);
+    setAccountInfo(null);
+    navigate(`${ROUTE_CONSTANTS.STAFFCODE}?${params.toString()}`);
+  };
+
+  const CheckCoupon = async (code: string) => {
+    if (!code?.trim()) throw new Error('쿠폰 번호를 입력해주세요.');
+    try {
+      const res = await cartApiV3.applyCoupon(code);
+      setAppliedCouponCode(code.trim());
+      return res;
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })
+        ?.response?.data?.message;
+      throw new Error(msg || '해당 번호의 쿠폰이 존재하지 않아요!');
     }
-    if (discountType === "percent") {
-      const discounted = Math.max(
-        0,
-        Math.floor(originalPrice * (1 - discountAmount / 100))
-      );
-      setTotalPrice(discounted);
-    } else {
-      const discounted = Math.max(0, originalPrice - discountAmount);
-      setTotalPrice(discounted);
+  };
+
+  /** 송금 확인 요청 — 직원 호출용 API (모달 2단계에서 호출) */
+  const requestPaymentConfirmation = useCallback(async () => {
+    const tableId = snapshot?.table_usage?.table_id;
+    const cartId = snapshot?.cart?.id;
+    if (tableId == null || cartId == null) {
+      throw new Error('테이블 또는 장바구니 정보가 없습니다.');
     }
-  }, [originalPrice, appliedCoupon, discountType, discountAmount]);
+
+    console.log('[ShoppingCart] 💳 결제 확인 요청:', { tableId, cartId });
+    const result = await cartApiV3.requestPaymentConfirmation({
+      tableId,
+      cartId,
+      category: 'GENERAL',
+    });
+    console.log('[ShoppingCart] 💳 결제 확인 응답:', result);
+    return result;
+  }, [snapshot?.table_usage?.table_id, snapshot?.cart?.id]);
 
   return {
     shoppingItemResponse,
@@ -340,7 +316,10 @@ const useShoppingCartPage = () => {
     Pay,
     errorMessage,
     CheckAccount,
+    requestPaymentConfirmation,
     accountInfo,
+    paymentModalLoading,
+    paymentModalError,
     FetchShoppingItems,
     increaseQuantity,
     decreaseQuantity,
@@ -348,8 +327,13 @@ const useShoppingCartPage = () => {
     setIsCouponModal,
     isCouponModal,
     CheckCoupon,
-    setAppliedCoupon,
+    setAppliedCoupon: () => {
+      setAppliedCouponCode(null);
+      cartApiV3.cancelCoupon().catch(console.error);
+    },
     appliedCouponCode,
+    cartStatus,
+    isOrderable,
   };
 };
 

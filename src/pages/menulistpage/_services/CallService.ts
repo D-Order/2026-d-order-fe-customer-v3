@@ -1,25 +1,25 @@
 // src/pages/MenuListPage/_services/CallService.ts
-import { instance } from '@services/instance';
+import { cartApiV3 } from '@pages/shoppingCart/_api/cartApiV3';
+import { useCartSnapshotStore } from '@stores/cartSnapshotStore';
 
 export const CallService = {
-  callStaff: async ({
-    tableNumber,
-  }: {
-    tableNumber: number;
-    message: string;
-  }) => {
+  /** 메뉴 리스트 헤더 직원 호출 — Spring staffcall/request (일반 STAFF_CALL) */
+  callStaff: async () => {
     const boothId = localStorage.getItem('boothId');
+    if (!boothId) throw new Error('Booth-ID가 없습니다.');
 
-    const res = await instance.post(
-      '/api/v2/tables/call_staff/',
-      {
-        table_num: tableNumber,
-      },
-      {
-        headers: { 'Booth-ID': boothId },
-      }
-    );
+    let snap = useCartSnapshotStore.getState().snapshot;
+    if (!snap?.table_usage?.table_id || !snap?.cart?.id) {
+      snap = await cartApiV3.getDetail();
+      if (snap) useCartSnapshotStore.getState().setSnapshot(snap);
+    }
 
-    return res.data;
+    const tableId = snap?.table_usage?.table_id;
+    const cartId = snap?.cart?.id;
+    if (tableId == null || cartId == null) {
+      throw new Error('테이블 또는 장바구니 정보가 없습니다.');
+    }
+
+    return cartApiV3.requestGeneralStaffCall({ tableId, cartId });
   },
 };

@@ -1,4 +1,4 @@
-import styled from "styled-components";
+import styled from 'styled-components';
 
 interface BtnProps {
   text: string;
@@ -26,19 +26,19 @@ const BtnContainer = styled.button`
   border-radius: 10px;
 
   background-color: ${({ theme, disabled }) =>
-    disabled ? theme.colors.Black02 : theme.colors.Orange01};
+    disabled ? theme.colors.Focused : theme.colors.Orange01};
   color: ${({ theme, disabled }) =>
     disabled ? theme.colors.Gray01 : theme.colors.Bg};
   ${({ theme }) => theme.fonts.Bold16};
 
   transition: transform 0.3s ease-in-out;
   &:hover {
-    transform: ${({ disabled }) => (disabled ? "none" : "scale(1.05)")};
+    transform: ${({ disabled }) => (disabled ? 'none' : 'scale(1.05)')};
   }
   @media (hover: none) {
     &:active {
-      transform: ${({ disabled }) => (disabled ? "none" : "scale(1.05)")};
+      transform: ${({ disabled }) => (disabled ? 'none' : 'scale(1.05)')};
     }
   }
-  cursor: ${({ disabled }) => (disabled ? "not-allowed" : "pointer")};
+  cursor: ${({ disabled }) => (disabled ? 'not-allowed' : 'pointer')};
 `;

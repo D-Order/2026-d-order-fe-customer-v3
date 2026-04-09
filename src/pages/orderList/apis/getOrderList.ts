@@ -1,36 +1,56 @@
 // src/pages/orderList/apis/getOrderList.ts
 import axios from "axios";
 
-export interface RawOrderItem {
-  type: "menu" | "setmenu";
-  // menu
-  menu_id?: number;
-  menu_name?: string;
-  menu_price?: number;
-  menu_image?: string | null;
-  menu_category?: string;
-
-  // setmenu
-  set_id?: number;
-  set_name?: string;
-  set_price?: number;
-  set_image?: string | null;
-
-  // 공통
-  fixed_price?: number;
+/**
+ * v3 주문 내역 API 응답 타입
+ * GET /api/v3/django/order/table/{table_usage_id}/
+ */
+export interface V3OrderItem {
+  id: number;
+  menu_id: number;
+  name: string;
+  image: string | null;
   quantity: number;
-  status: "pending" | "cooked" | "served";
+  fixed_price: number;
+  item_total_price: number;
+  from_set: boolean;
+  status?: string;
 }
 
-export interface OrderListResponse {
-  status: "success" | "error";
-  code: number;
-  data?: {
-    order_amount: number;
-    orders: RawOrderItem[];
-  };
-  message?: string;
+export interface V3Order {
+  order_id: number;
+  order_status: string;
+  created_at: string;
+  has_coupon: boolean;
+  coupon_name: string | null;
+  table_coupon_id: number | null;
+  order_discount_price: number;
+  order_fixed_price: number;
+  order_items: V3OrderItem[];
 }
+
+export interface V3OrderListResponse {
+  message: string;
+  data: {
+    table_usage_id: number;
+    table_number: string;
+    table_total_price: number;
+    total_original_price: number;
+    total_discount_price: number;
+    order_list: V3Order[];
+  };
+}
+
+/**
+ * 프론트에서 쓰기 쉬운 정규화된 아이템 타입
+ */
+export type NormalizedOrderItem = {
+  id: number;
+  name: string;
+  price: number; // fixed_price (단가)
+  image: string | null;
+  quantity: number;
+};
 
 export function toAbsoluteUrl(path?: string | null): string | null {
   if (!path) return null;
@@ -45,55 +65,57 @@ export function toAbsoluteUrl(path?: string | null): string | null {
   return base ? `${base}/${rel}` : `/${rel}`;
 }
 
-/** ✅ 정규화된 아이템 타입 */
-export type NormalizedOrderItem = {
-  id: number;
-  kind: "menu" | "setmenu";
-  name: string;
-  price: number;             // ✅ fixed_price 우선
-  image: string | null;      // 절대 URL or null
-  quantity: number;
-};
-
-/** ✅ 메뉴/세트를 공통 구조로 정규화: fixed_price → (menu|set)_price */
-export function normalizeOrder(item: RawOrderItem): NormalizedOrderItem {
-  const kind: "menu" | "setmenu" = item.type === "setmenu" ? "setmenu" : "menu";
-
-  const id =
-    kind === "menu" ? (item.menu_id ?? 0) : (item.set_id ?? 0);
-
-  const name =
-    kind === "menu"
-      ? (item.menu_name ?? "")
-      : (item.set_name ?? "");
-
-  const rawImg =
-    kind === "menu" ? item.menu_image : item.set_image;
-
-  const image = toAbsoluteUrl(rawImg);
-
-  // ✅ 가격: fixed_price 최우선 → (menu|set)_price 폴백
-  const price =
-    typeof item.fixed_price === "number"
-      ? item.fixed_price
-      : kind === "menu"
-      ? (typeof item.menu_price === "number" ? item.menu_price : 0)
-      : (typeof item.set_price === "number" ? item.set_price : 0);
-
-  const quantity = typeof item.quantity === "number" ? item.quantity : 0;
-
-  return { id, kind, name, price, image, quantity };
-}
-
 const api = axios.create({
   baseURL: import.meta.env.VITE_BASE_URL ?? "",
   withCredentials: true,
   headers: { "Content-Type": "application/json" },
 });
 
-export async function getOrderList(tableNum: number, boothId: number) {
-  const res = await api.get<OrderListResponse>(`/api/v2/tables/${tableNum}/orders/`, {
-    headers: { "booth-id": String(boothId) },
-  });
-  return res.data;
+/**
+ * v3 주문 내역 조회 후, UI에서 쓰기 쉬운 형태로 변환한 응답 타입
+ */
+export interface OrderListUiResponse {
+  status: "success" | "error";
+  code: number;
+  data?: {
+    order_amount: number;
+    orders: NormalizedOrderItem[];
+  };
+  message?: string;
+}
+
+export async function getOrderList(tableUsageId: number): Promise<OrderListUiResponse> {
+  if (!tableUsageId) {
+    return {
+      status: "error",
+      code: 400,
+      message: "유효한 table_usage_id가 필요합니다.",
+    };
+  }
+
+  const res = await api.get<V3OrderListResponse>(
+    `/api/v3/django/order/table/${tableUsageId}/`
+  );
+
+  const raw = res.data;
+  const orders: NormalizedOrderItem[] =
+    raw.data.order_list.flatMap((order) =>
+      order.order_items.map((item) => ({
+        id: item.id,
+        name: item.name,
+        price: item.fixed_price,
+        image: toAbsoluteUrl(item.image),
+        quantity: item.quantity,
+      }))
+    );
+
+  return {
+    status: "success",
+    code: 200,
+    data: {
+      order_amount: raw.data.table_total_price,
+      orders,
+    },
+    message: raw.message,
+  };
 }

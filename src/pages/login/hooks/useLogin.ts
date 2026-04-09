@@ -4,19 +4,6 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { ROUTE_CONSTANTS } from "@constants/RouteConstants";
 
-// 테이블 입장 API 응답 타입
-interface TableEnterResponse {
-  status: string;
-  message: string;
-  code: number;
-  data: {
-    table_num: number;
-    booth_id: number;
-    booth_name: string;
-    table_status: string;
-  };
-}
-
 export const useLogin = (boothId: string | null) => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -42,17 +29,30 @@ export const useLogin = (boothId: string | null) => {
         throw new Error("부스 ID가 없습니다.");
       }
 
-      const response: TableEnterResponse = await enterTable(
-        storedBoothId,
-        tableValue
-      );
+      const response = await enterTable(storedBoothId, tableValue);
+      const body = response.data;
 
-      if (response.status === "success") {
-        localStorage.setItem("tableNum", tableValue);
+      // v3 성공 시 200 + message, data 반환
+      if (body?.data?.table_num != null) {
+        localStorage.setItem("tableNum", String(body.data.table_num));
+        if (typeof body?.data?.table_usage_id === "number") {
+          localStorage.setItem("tableUsageId", String(body.data.table_usage_id));
+        }
+        // 로그인 성공 시 응답 헤더에 booth_id가 있으면 저장 (이후 API에서 헤더로 사용)
+        const headerBoothId =
+          response.headers["booth_id"] ??
+          response.headers["booth-id"] ??
+          response.headers["Booth-ID"];
+        if (headerBoothId) {
+          localStorage.setItem(
+            "boothId",
+            typeof headerBoothId === "string" ? headerBoothId : String(headerBoothId)
+          );
+        }
         navigate(ROUTE_CONSTANTS.MENULIST);
       } else {
         setIsTableError(true);
-        setErrorMessage(response.message);
+        setErrorMessage(body?.message ?? "테이블 입장에 실패했습니다.");
       }
     } catch (error) {
       let message = "테이블 입장 중 오류가 발생했습니다.";

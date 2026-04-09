@@ -22,6 +22,16 @@ export const MenuListPageService = {
         soldOut: true,
         quantity: 1,
       },
+      {
+        id: 2,
+        name: '테이블 이용료 (무료)',
+        description: '이용료 없음',
+        price: 0,
+        imageUrl: '/images/table.png',
+        category: 'tableFee' as const,
+        soldOut: false,
+        quantity: 1,
+      },
 
       // 메뉴
       {

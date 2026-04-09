@@ -1,7 +1,8 @@
 import * as S from './MenuListPage.styled';
+import { useNavigate } from 'react-router-dom';
 
+// 실제 API 사용 (data.FEE/SET/MENU/DRINK 구조)
 import useMenuListPage from './_hooks/useMenuListPage';
-
 import MenuListPageHeader from './_components/MenuListPageHeader/MenuListPageHeader';
 import MenuList from './_components/MenuList/MenuList';
 import MenuAssignModal from './_components/modals/MenuAssignModal/MenuAssignModal';
@@ -9,6 +10,9 @@ import MenuAssignSidModal from './_components/modals/menuAssignSideModal/MenuAss
 import MenuListHeader from './_components/Header/MenuListHeader';
 
 import Loading from '@components/loading/Loading';
+
+import { IMAGE_CONSTANTS } from '@constants/ImageConstants';
+import { ROUTE_CONSTANTS } from '@constants/RouteConstants';
 
 const MenulistPage = () => {
   const {
@@ -37,6 +41,8 @@ const MenulistPage = () => {
     handleIncrease,
     handleDecrease,
   } = useMenuListPage();
+
+  const navigate = useNavigate();
 
   if (isLoading) return <Loading />;
   return (
@@ -82,6 +88,11 @@ const MenulistPage = () => {
           onNavigate={handleNavigate}
         />
       )}
+      <S.DorderDevelopers
+        src={IMAGE_CONSTANTS.DORDER_DEVELOPERS}
+        alt="Dorder Developers"
+        onClick={() => navigate(ROUTE_CONSTANTS.DEVPAGE)}
+      />
     </S.Wrapper>
   );
 };

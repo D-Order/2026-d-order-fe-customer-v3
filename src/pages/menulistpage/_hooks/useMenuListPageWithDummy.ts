@@ -2,12 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { ROUTE_CONSTANTS } from '@constants/RouteConstants';
-import { MENULISTPAGE_CONSTANTS } from '../_constants/menulistpageconstants';
-// import { useShoppingCartStore } from '@stores/shoppingCartStore';
-// import { MenuListPageService } from '../_Dummy/MenuListPageService';
-import { MenuListService } from '../_services/MenuListService';
-import { cartApiV3 } from '@pages/shoppingCart/_api/cartApiV3';
-import { useCartSnapshotStore } from '@stores/cartSnapshotStore';
+import { MenuListPageService } from '../_Dummy/MenuListPageService';
+import { CartService } from '../_services/CartService';
 import { sortByPriceDesc } from '../_utils/sortByPrice';
 
 const SCROLL_OFFSET = 120;
@@ -32,12 +28,14 @@ interface SetMenuItem extends BaseMenuItem {
   }[];
 }
 
-// type MenuItem = BaseMenuItem | SetMenuItem;
-
-const useMenuListPage = () => {
+/**
+ * 메뉴 리스트 페이지 - 더미 데이터 전용 훅.
+ * 실제 API 연결 시 useMenuListPage 로 import 변경하면 됨.
+ */
+const useMenuListPageWithDummy = () => {
   const navigate = useNavigate();
-  const itemCount = useCartSnapshotStore((s) => s.itemCount);
-  const cartCount = itemCount > 0;
+
+  const [cartCount, setCartCount] = useState<boolean>(false);
 
   const [menuItems, setMenuItems] = useState<any[]>([]);
   const [boothName, setBoothName] = useState<string>('');
@@ -74,113 +72,42 @@ const useMenuListPage = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchData = async () => {
+    const initCartState = async () => {
+      try {
+        const cartId = localStorage.getItem('cartId');
+        if (!cartId) return;
+        const cartNumber = parseInt(cartId, 10);
+        if (Number.isNaN(cartNumber)) return;
+
+        const hasItems = await CartService.exists(cartNumber);
+        setCartCount(hasItems);
+      } catch (e) {
+        console.error('cart exists check failed', e);
+        setCartCount(false);
+      }
+    };
+    initCartState();
+  }, []);
+
+  useEffect(() => {
+    const fetchData = () => {
       setIsLoading(true);
       try {
-        const boothId = localStorage.getItem('boothId');
-        if (!boothId || !/^\d+$/.test(boothId)) {
-          setIsLoading(false);
-          // navigate(ROUTE_CONSTANTS.LOGIN);
-          return;
-        }
-
         const tableId = localStorage.getItem('tableNum');
-        const boothIdNumber = parseInt(boothId, 10);
-        const tableNumber = tableId ? parseInt(tableId, 10) : null;
+        const parsed = tableId ? parseInt(tableId, 10) : NaN;
+        const tableNumber = Number.isNaN(parsed) ? null : parsed;
+        // 더미: 테이블 번호 없어도 헤더(카테고리 탭) 노출을 위해 기본값 1 사용
+        setTableNum(tableNumber !== null ? tableNumber : 1);
 
-        if (Number.isNaN(boothIdNumber)) throw new Error('Invalid boothId');
-
-        // API 호출 (data.FEE / SET / MENU / DRINK 구조)
-        const payload = await MenuListService.fetchAllMenus(boothIdNumber);
-
-        const { data, booth_name, table_info } = payload;
-        const NON_IMG = MENULISTPAGE_CONSTANTS.MENUITEMS.IMAGES.NONIMAGE;
-
-        setTableNum(table_info?.table_number ?? tableNumber);
-        setBoothName(booth_name ?? '');
-
-        // 1) 테이블 이용료 (data.FEE)
-        const feeItem = data?.FEE?.[0];
-        let seatItem: BaseMenuItem | null = null;
-        if (feeItem) {
-          seatItem = {
-            id: feeItem.id,
-            name: feeItem.name,
-            description: feeItem.description,
-            price: feeItem.price,
-            imageUrl: feeItem.image ?? NON_IMG,
-            quantity: 1,
-            soldOut: feeItem.is_soldout,
-            category: 'tableFee',
-          };
-        }
-
-        // 2) 세트 (data.SET)
-        const mappedSets: SetMenuItem[] = sortByPriceDesc(
-          data?.SET ?? [],
-          (s) => s.price,
-        ).map((s) => ({
-          id: s.id,
-          name: s.name,
-          description: s.description,
-          originprice: s.origin_price,
-          price: s.price,
-          imageUrl: s.image ?? undefined,
-          quantity: 1,
-          soldOut: !!s.is_soldout,
-          category: 'set',
-          menuItems: s.menu_items ?? [],
-        }));
-
-        // 3) 메뉴 (data.MENU)
-        const mappedMenus: BaseMenuItem[] = sortByPriceDesc(
-          data?.MENU ?? [],
-          (m) => m.price,
-        ).map((m) => ({
-          id: m.id,
-          name: m.name,
-          description: m.description,
-          price: m.price,
-          imageUrl: m.image ?? undefined,
-          quantity: 100,
-          soldOut: !!m.is_soldout,
-          category: 'menu' as const,
-        }));
-
-        // 4) 음료 (data.DRINK)
-        const mappedDrinks: BaseMenuItem[] = sortByPriceDesc(
-          data?.DRINK ?? [],
-          (m) => m.price,
-        ).map((m) => ({
-          id: m.id,
-          name: m.name,
-          description: m.description,
-          price: m.price,
-          imageUrl: m.image ?? undefined,
-          quantity: 100,
-          soldOut: !!m.is_soldout,
-          category: 'drink' as const,
-        }));
-
-        const allItems = [
-          ...(seatItem ? [seatItem] : []),
-          ...mappedSets,
-          ...mappedMenus,
-          ...mappedDrinks,
-        ];
-
+        const menuItemsData = MenuListPageService.fetchMenuItems();
+        const setMenusData = MenuListPageService.fetchSetMenus();
+        const allItems = [...menuItemsData, ...setMenusData] as (
+          | BaseMenuItem
+          | SetMenuItem
+        )[];
         const allItemsSorted = sortByPriceDesc(allItems, (i) => i.price);
         setMenuItems(allItemsSorted);
-
-        const tu = localStorage.getItem('tableUsageId');
-        if (tu && /^\d+$/.test(tu)) {
-          try {
-            const snap = await cartApiV3.getDetail();
-            if (snap) useCartSnapshotStore.getState().setSnapshot(snap);
-          } catch {
-            /* 장바구니 없음·미생성 등 */
-          }
-        }
+        setBoothName('더미 부스');
       } catch (e) {
         console.error(e);
         setMenuItems([]);
@@ -262,6 +189,20 @@ const useMenuListPage = () => {
 
   const [errorToast, setErrorToast] = useState<string | null>(null);
 
+  const refreshCartCount = async () => {
+    try {
+      const cid = CartService.getLocalCartId();
+      if (cid == null) {
+        setCartCount(false);
+        return;
+      }
+      const has = await CartService.exists(cid);
+      setCartCount(has);
+    } catch (e) {
+      console.error('refreshCartCount failed', e);
+    }
+  };
+
   const handleSubmitItem = async () => {
     if (!selectedItem) return;
     if (!tableNum) {
@@ -270,28 +211,19 @@ const useMenuListPage = () => {
     }
     if (count <= 0) return;
 
+    const type: 'menu' | 'set_menu' =
+      selectedItem.category === 'set' ? 'set_menu' : 'menu';
+
     try {
-      await cartApiV3.add({
-        type:
-          selectedItem.category === 'set'
-            ? 'setmenu'
-            : selectedItem.category === 'tableFee'
-              ? 'fee'
-              : 'menu',
-        ...(selectedItem.category === 'set'
-          ? { set_menu_id: selectedItem.id }
-          : { menu_id: selectedItem.id }),
+      await CartService.add({
+        table_num: tableNum,
+        type,
+        id: selectedItem.id,
         quantity: count,
       });
 
-      try {
-        const snap = await cartApiV3.getDetail();
-        if (snap) useCartSnapshotStore.getState().setSnapshot(snap);
-      } catch {
-        /* WS로도 갱신될 수 있음 */
-      }
+      refreshCartCount();
 
-      // 기존 UX 흐름 유지
       setIsClosing(true);
       setTimeout(() => {
         setIsModalOpen(false);
@@ -343,8 +275,8 @@ const useMenuListPage = () => {
     showToast,
     handleDecrease,
     handleIncrease,
-    errorToast, // 빌드오류해결을 위해 읽히지 않고 있는값 추가
+    errorToast,
   };
 };
 
-export default useMenuListPage;
+export default useMenuListPageWithDummy;

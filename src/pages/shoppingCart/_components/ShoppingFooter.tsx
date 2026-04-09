@@ -1,6 +1,6 @@
-import Btn from "@components/button/Btn";
-import { SetStateAction } from "react";
-import styled from "styled-components";
+import Btn from '@components/button/Btn';
+import { SetStateAction } from 'react';
+import styled from 'styled-components';
 
 const ShoppingFooter = ({
   totalPrice,
@@ -8,12 +8,16 @@ const ShoppingFooter = ({
   appliedCoupon,
   CheckShoppingItems,
   setIsCouponModal,
+  orderButtonDisabled,
+  orderButtonSubText,
 }: {
   totalPrice: number;
   originalPrice: number;
   appliedCoupon: boolean;
   CheckShoppingItems: () => void;
   setIsCouponModal: React.Dispatch<SetStateAction<boolean>>;
+  orderButtonDisabled: boolean;
+  orderButtonSubText?: string;
 }) => {
   return (
     <Wrapper>
@@ -22,19 +26,29 @@ const ShoppingFooter = ({
           + 쿠폰 사용
         </CouponBtn>
       </CouponWrapper>
-      <div style={{ justifyContent: "space-between" }}>
+      <PriceRow>
         <p id="totalPrice">💵 총 주문금액</p>
         <PriceContainer>
           {appliedCoupon && (
             <OriginalPrice>
-              {originalPrice.toLocaleString("ko-KR")}
+              {originalPrice.toLocaleString('ko-KR')}
             </OriginalPrice>
           )}
-          <PriceText>{totalPrice.toLocaleString("ko-KR")}원</PriceText>
+          <PriceText>{totalPrice.toLocaleString('ko-KR')}원</PriceText>
         </PriceContainer>
-      </div>
-      <div style={{ justifyContent: "center" }}>
-        <Btn text="주문하기" onClick={CheckShoppingItems} />
+      </PriceRow>
+      <div
+        style={{ justifyContent: 'center', width: '114%', marginLeft: '-7%' }}
+      >
+        <Btn
+          text={
+            orderButtonDisabled
+              ? orderButtonSubText || '결제 완료 후 이용 가능'
+              : '주문하기'
+          }
+          onClick={CheckShoppingItems}
+          disabled={orderButtonDisabled}
+        />
       </div>
     </Wrapper>
   );
@@ -88,6 +102,12 @@ const CouponBtn = styled.button`
   border-radius: 50px;
 `;
 
+const PriceRow = styled.div`
+  justify-content: space-between;
+  min-height: 40px;
+  align-items: center;
+`;
+
 const PriceContainer = styled.div`
   display: flex;
   flex-direction: column !important;
@@ -105,3 +125,4 @@ const PriceText = styled.p`
   color: ${({ theme }) => theme.colors.Orange01};
   ${({ theme }) => theme.fonts.ExtraBold16}
 `;
+

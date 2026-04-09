@@ -1,57 +1,46 @@
 // src/pages/MenuListPage/_services/MenuListService.ts
-import { instance } from "@services/instance";
+import { instance } from '@services/instance';
 
-export type ApiSeat = {
-  seat_type: "table" | "person" | "none" | string;
-  seat_tax_table?: number;
-  seat_tax_person?: number;
-  is_seatfee_soldout?: boolean;
-};
-
-export type ApiMenu = {
-  menu_id: number;
-  booth_id: number;
-  menu_name: string;
-  menu_description: string;
-  menu_category: "메뉴" | "음료" | "seat_fee" | string;
-  menu_price: number;
-  menu_amount: number;
-  menu_image: string | null;
+/** API 응답: data.FEE / SET / MENU / DRINK 구조 */
+export type ApiMenuItem = {
+  id: number;
+  name: string;
+  price: number;
+  description: string;
+  image: string | null;
   is_soldout: boolean;
 };
 
-export type ApiSetMenu = {
-  booth_id: number;
-  is_soldout: boolean;
+export type ApiSetItem = ApiMenuItem & {
   origin_price: number;
-  min_menu_amount: number;
-  set_name: string;
-  set_description: string;
-  set_image: string | null;
-  set_menu_id: number;
-  set_price: number;
-  menu_items: { menu_id: number; quantity: number }[];
+  discount_rate?: number;
+  menu_items?: { menu_id: number; quantity: number }[];
 };
 
-export type BoothAllMenusResponse = {
-  status: number;
+export type MenuListApiResponse = {
   message: string;
+  booth_id: number;
+  booth_name: string;
+  seat_type: 'table' | 'person' | 'NO' | string;
   data: {
-    booth_id: number;
-    table: ApiSeat;
-    menus: ApiMenu[];
-    setmenus: ApiSetMenu[];
+    FEE: ApiMenuItem[];
+    SET: ApiSetItem[];
+    MENU: ApiMenuItem[];
+    DRINK: ApiMenuItem[];
+  };
+  table_info: {
+    table_number: number;
+    table_usage_id: number;
   };
 };
 
 export const MenuListService = {
-  fetchAllMenus: async (boothId: number) => {
-    const tableNum = localStorage.getItem("tableNum") || "";
+  fetchAllMenus: async (boothId: number): Promise<MenuListApiResponse> => {
+    const tableNum = localStorage.getItem('tableNum') || '';
 
-    const res = await instance.get<BoothAllMenusResponse>(
-      `/api/v2/booth/${boothId}/all-menus/?table_num=${tableNum}`
+    const res = await instance.get<MenuListApiResponse>(
+      `/api/v3/django/booth/${boothId}/menu-list/?table_num=${tableNum}`,
     );
-    //console.log(res);
-    return res.data.data; // { booth_id, table, menus, setmenus }
+    return res.data;
   },
 };

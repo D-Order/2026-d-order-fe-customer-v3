@@ -124,7 +124,7 @@ export const PageWrapper = styled.div`
     justify-content: flex-start;
     align-items: center;
     box-sizing: border-box;
-    padding: 0 1.25rem 1rem;
+    padding: 0 1rem 1rem;
 `;
 
 export const OrderListWrapper = styled.div`

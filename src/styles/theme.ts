@@ -3,7 +3,7 @@ const fontGenerator = (
   fontSize = "1rem",
   fontWeight = "normal",
   lineHeight = "normal",
-  letterSpacing = "normal"
+  letterSpacing = "normal",
 ) => ({
   "font-family": fontFamily,
   "font-weight": fontWeight,
@@ -15,37 +15,49 @@ const fontGenerator = (
 const colors = {
   // 배경색
   Bg: "#FAFAFA",
-
+  Bg02: "#F5EBE5",
   // 포인트 색상
   Point: "#FFD232",
 
   // 메인 색상
+  Orange00: "#FFF0EC",
   Orange01: "#FF6E3F",
-  Orange02: "#FFF0EC",
+  Orange02: "#E66339",
+  Highlight: "#BE5D3A",
   Gray01: "#F2F2F2",
+  Gray02: "#8A8A8A",
 
   // 텍스트 색상
   Black01: "#2A2A2A",
-  Black02: "#C0C0C0",
+  Black02: "#414141",
+  //Black02: "#C0C0C0",
 
   // 기타 색상
   White: "#FFFFFF",
   Black: "#000000",
+  Success: "#0F851A",
   Green01: "#0F851A",
-  Gray02: "#8A8A8A",
+  Error: "#F03F40",
+  Focused: "#C0C0C0",
+};
+
+const status = {
+  error: "#F03F40",
 };
 
 const theme = {
   colors,
+  status,
 
   fonts: {
+    Bold32: fontGenerator("SUIT-Bold", "32px", "700", "auto", "normal"),
     // Title
     ExtraBold24: fontGenerator(
       "SUIT-ExtraBold",
       "24px",
       "800",
       "auto",
-      "normal"
+      "normal",
     ),
     Bold24: fontGenerator("SUIT-Bold", "24px", "700", "auto", "normal"),
     ExtraBold20: fontGenerator(
@@ -53,7 +65,7 @@ const theme = {
       "20px",
       "800",
       "auto",
-      "normal"
+      "normal",
     ),
     Bold20: fontGenerator("SUIT-Bold", "20px", "700", "auto", "normal"),
     ExtraBold18: fontGenerator(
@@ -61,7 +73,7 @@ const theme = {
       "18px",
       "800",
       "auto",
-      "normal"
+      "normal",
     ),
     Bold18: fontGenerator("SUIT-Bold", "18px", "700", "auto", "normal"),
 
@@ -71,7 +83,7 @@ const theme = {
       "16px",
       "800",
       "auto",
-      "normal"
+      "normal",
     ),
     Bold16: fontGenerator("SUIT-Bold", "16px", "700", "auto", "normal"),
     SemiBold16: fontGenerator("SUIT-SemiBold", "16px", "600", "auto", "normal"),
@@ -83,7 +95,7 @@ const theme = {
       "14px",
       "800",
       "auto",
-      "normal"
+      "normal",
     ),
     Bold14: fontGenerator("SUIT-Bold", "14px", "700", "auto", "normal"),
     SemiBold14: fontGenerator("SUIT-SemiBold", "14px", "600", "auto", "normal"),
@@ -95,7 +107,7 @@ const theme = {
       "12px",
       "800",
       "auto",
-      "normal"
+      "normal",
     ),
     Bold12: fontGenerator("SUIT-Bold", "12px", "700", "auto", "normal"),
     SemiBold12: fontGenerator("SUIT-SemiBold", "12px", "600", "auto", "normal"),

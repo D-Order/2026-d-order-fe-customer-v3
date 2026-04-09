@@ -11,8 +11,8 @@ type BoothNameResp = {
 export const BoothID = {
   async getName(boothId: number): Promise<string> {
     const res = await instance.get<BoothNameResp>(
-      '/api/v2/booth/tables/name/',
-      { params: { booth_id: boothId } }
+      `/api/v3/django/booth/${boothId}/name/`,
+      { params: { booth_id: boothId } },
     );
     return res.data?.data?.booth_name ?? '';
   },

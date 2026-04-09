@@ -1,4 +1,4 @@
-import styled from "styled-components";
+import styled from 'styled-components';
 
 export const LoginWrapper = styled.div`
   display: flex;
@@ -53,7 +53,7 @@ export const InputTableNumber = styled.input`
   background-color: ${({ theme }) => theme.colors.Bg};
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.Black02};
+    color: ${({ theme }) => theme.colors.Focused};
   }
 
   ${({ theme }) => theme.fonts.SemiBold16}

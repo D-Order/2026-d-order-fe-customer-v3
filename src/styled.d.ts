@@ -5,14 +5,17 @@ declare module "styled-components" {
     colors: {
       // 배경색
       Bg: string;
-
+      Bg02: string;
       // 포인트 색상
       Point: string;
 
       // 메인 색상
+      Orange00: string;
       Orange01: string;
       Orange02: string;
+      Highlight: string;
       Gray01: string;
+      Gray02: string;
 
       // 텍스트 색상
       Black01: string;
@@ -21,11 +24,14 @@ declare module "styled-components" {
       // 기타 색상
       White: string;
       Black: string;
+      Success: string;
       Green01: string;
-      Gray02: string;
+      Error: string;
+      Focused: string;
     };
     fonts: {
       // Title
+      Bold32: any;
       ExtraBold24: any;
       Bold24: any;
       ExtraBold20: any;
@@ -51,6 +57,9 @@ declare module "styled-components" {
       SemiBold12: any;
       Medium12: any;
       SemiBold10: any;
+    };
+    status: {
+      error: string;
     };
   }
 }
