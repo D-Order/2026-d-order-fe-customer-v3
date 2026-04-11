@@ -1,7 +1,50 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import copy from '@assets/icons/copy.svg';
 import { toast } from 'react-toastify';
+
+import { ROUTE_CONSTANTS } from '@constants/RouteConstants';
+import { IMAGE_CONSTANTS } from '@constants/ImageConstants';
+import { cartApiV3 } from '../_api/cartApiV3';
+
+const STAFFCALL_TOAST_ID = 'staffcall-toast';
+
+function orangeToastError(message: string) {
+  toast.dismiss(STAFFCALL_TOAST_ID);
+  toast.error(message, {
+    toastId: STAFFCALL_TOAST_ID,
+    icon: <img src={IMAGE_CONSTANTS.CHECK} alt="" />,
+    closeButton: false,
+    style: {
+      backgroundColor: '#FF6E3F',
+      color: '#FAFAFA',
+      fontSize: '14px',
+      fontWeight: '800',
+      borderRadius: '8px',
+      padding: '0.75rem 0.875rem',
+      zIndex: 100,
+    },
+  });
+}
+
+function orangeToastSuccess(message: string) {
+  toast.dismiss(STAFFCALL_TOAST_ID);
+  toast.success(message, {
+    toastId: STAFFCALL_TOAST_ID,
+    icon: <img src={IMAGE_CONSTANTS.CHECK} alt="" />,
+    closeButton: false,
+    style: {
+      backgroundColor: '#FF6E3F',
+      color: '#FAFAFA',
+      fontSize: '14px',
+      fontWeight: '800',
+      borderRadius: '8px',
+      padding: '0.75rem 0.875rem',
+      zIndex: 100,
+    },
+  });
+}
 
 interface TotalAccount {
   depositor: string;
@@ -28,11 +71,10 @@ const SendMoneyModal = ({
   accountInfo,
   paymentLoading,
   paymentError,
-  onRetryLoadAccount,
   usingCoupon: _usingCoupon,
   onRequestTransferConfirmation,
 }: {
-  canclePay: () => void;
+  canclePay: () => void | Promise<void>;
   pay: (totalPrice: number, code: string) => void;
   copyAccount: (text: string) => void;
   totalPrice: number;
@@ -43,7 +85,6 @@ const SendMoneyModal = ({
   } | null;
   paymentLoading: boolean;
   paymentError: string | null;
-  onRetryLoadAccount: () => void;
   usingCoupon: string;
   /** 「송금 확인 요청」 시 서버에 직원 호출·주문 처리 요청 */
   onRequestTransferConfirmation?: () => Promise<{
@@ -52,6 +93,7 @@ const SendMoneyModal = ({
     subscribe_token?: string;
   }>;
 }) => {
+  const navigate = useNavigate();
   const [step, setStep] = useState<Step>('account');
   const [confirmSubmitting, setConfirmSubmitting] = useState(false);
   const [confirmError, setConfirmError] = useState<string | null>(null);
@@ -61,14 +103,22 @@ const SendMoneyModal = ({
   const acceptTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [staffCallId, setStaffCallId] = useState<number | null>(null);
   const [subscribeToken, setSubscribeToken] = useState<string | null>(null);
+  const lastStaffStatusRef = useRef<string | null>(null);
+  const closeWs = () => {
+    if (wsRef.current) {
+      wsRef.current.close();
+      wsRef.current = null;
+    }
+  };
 
   useEffect(() => {
     if (accountInfo) setStep('account');
   }, [accountInfo]);
 
   useEffect(() => {
-    if (!staffcallWaiting) return;
     if (!staffCallId || !subscribeToken) return;
+    // 이미 연결되어 있으면 재연결하지 않음
+    if (wsRef.current) return;
 
     const wsUrl = `${getWsBaseUrl()}/ws/customer/staffcall`;
     const ws = new WebSocket(wsUrl);
@@ -81,15 +131,21 @@ const SendMoneyModal = ({
       }
     };
 
-    acceptTimeoutRef.current = setTimeout(() => {
-      toast.error('직원이 아직 응답하지 않았어요. 잠시 후 다시 시도해 주세요.');
-      setStaffcallWaiting(false);
-      cleanupTimers();
-      if (wsRef.current) {
-        wsRef.current.close();
-        wsRef.current = null;
-      }
-    }, STAFFCALL_ACCEPT_TIMEOUT_MS);
+    const startAcceptTimeout = () => {
+      if (acceptTimeoutRef.current) return;
+      acceptTimeoutRef.current = setTimeout(() => {
+        toast.error(
+          '직원이 아직 응답하지 않았어요. 잠시 후 다시 시도해 주세요.',
+        );
+        setStaffcallWaiting(false);
+        // 연결은 유지하되, 사용자가 다시 요청할 수 있게 confirm에 남김
+        setStep('confirm');
+        cleanupTimers();
+      }, STAFFCALL_ACCEPT_TIMEOUT_MS);
+    };
+
+    // 최초 구독 이후에는 ACCEPTED 전까지 timeout 감시
+    startAcceptTimeout();
 
     ws.onopen = () => {
       ws.send(
@@ -107,23 +163,27 @@ const SendMoneyModal = ({
         if (msg?.type === 'STAFF_CALL_STATUS') {
           const status = String(msg.status ?? '').toUpperCase();
           if (status === 'ACCEPTED') {
+            lastStaffStatusRef.current = 'ACCEPTED';
             cleanupTimers();
-            if (wsRef.current) {
-              wsRef.current.close();
-              wsRef.current = null;
-            }
             setStaffcallWaiting(false);
             setStep('staffComing');
+          } else if (status === 'PENDING') {
+            // 서버 상태가 되돌아갈 수 있으므로 계속 추적
+            // ACCEPTED → PENDING 전환일 때만 1회 안내 (연속 PENDING 스팸 방지)
+            if (lastStaffStatusRef.current === 'ACCEPTED') {
+              orangeToastError('수락이 취소되었어요.');
+            }
+            lastStaffStatusRef.current = 'PENDING';
+            startAcceptTimeout();
+            setStaffcallWaiting(true);
+            setStep('confirm');
           }
         }
         if (msg?.type === 'ERROR') {
           cleanupTimers();
-          toast.error('요청에 실패했어요. 다시 시도해 주세요.');
+          orangeToastError('요청에 실패했어요. 다시 시도해 주세요.');
           setStaffcallWaiting(false);
-          if (wsRef.current) {
-            wsRef.current.close();
-            wsRef.current = null;
-          }
+          setStep('confirm');
         }
       } catch {
         // ignore parse error
@@ -142,7 +202,7 @@ const SendMoneyModal = ({
         wsRef.current = null;
       }
     };
-  }, [staffcallWaiting, staffCallId, subscribeToken]);
+  }, [staffCallId, subscribeToken, step]);
 
   if (paymentLoading) {
     return (
@@ -171,8 +231,14 @@ const SendMoneyModal = ({
           <button type="button" onClick={canclePay}>
             닫기
           </button>
-          <button type="button" onClick={onRetryLoadAccount}>
-            다시 시도
+          <button
+            type="button"
+            onClick={async () => {
+              await Promise.resolve(canclePay());
+              navigate(ROUTE_CONSTANTS.MENULIST);
+            }}
+          >
+            주문하기
           </button>
         </ModalConfirm>
       </ModalContainer>
@@ -272,8 +338,33 @@ const SendMoneyModal = ({
         <ModalConfirm>
           <button
             type="button"
-            disabled={confirmSubmitting || staffcallWaiting}
-            onClick={() => setStep('account')}
+            disabled={confirmSubmitting}
+            onClick={async () => {
+              // 요청 중(= 방금 생성한 staff call 구독 중)에는 staff call 자체 삭제
+              if (staffcallWaiting && staffCallId && subscribeToken) {
+                try {
+                  await cartApiV3.deleteStaffCall({ staffCallId, subscribeToken });
+                  orangeToastSuccess('호출을 취소했습니다.');
+                } catch (e: unknown) {
+                  const msg =
+                    (e as { response?: { data?: { message?: string } } })
+                      ?.response?.data?.message ||
+                    (e as Error)?.message ||
+                    '취소에 실패했어요. 잠시 후 다시 시도해 주세요.';
+                  orangeToastError(msg);
+                } finally {
+                  lastStaffStatusRef.current = null;
+                  setStaffcallWaiting(false);
+                  setStaffCallId(null);
+                  setSubscribeToken(null);
+                  closeWs();
+                  setStep('account');
+                }
+                return;
+              }
+
+              await Promise.resolve(canclePay());
+            }}
           >
             취소
           </button>
