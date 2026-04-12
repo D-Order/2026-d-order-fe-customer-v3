@@ -360,6 +360,7 @@ const useMenuListPage = () => {
     handleIncrease,
     errorToast,
     pendingToast,
+    isCartPending,
   };
 };
 

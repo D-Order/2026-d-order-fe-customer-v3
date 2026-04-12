@@ -163,18 +163,18 @@ export const Quantity = styled.div`
   color: ${({ theme }) => theme.colors.Black01};
 `;
 
-export const SubmitButton = styled.div<{ disabled?: boolean }>`
+export const SubmitButton = styled.div<{ disabled?: boolean; $muted?: boolean }>`
   ${({ theme }) => theme.fonts.Bold16};
   color: ${({ theme }) => theme.colors.White};
-  background-color: ${({ theme, disabled }) =>
-    disabled ? theme.colors.Black02 : theme.colors.Orange01};
+  background-color: ${({ theme, disabled, $muted }) =>
+    disabled || $muted ? theme.colors.Black02 : theme.colors.Orange01};
   display: flex;
   justify-content: center;
   align-items: center;
   padding: 1rem;
   border-radius: 12px;
   pointer-events: ${({ disabled }) => (disabled ? 'none' : 'auto')};
-  cursor: ${({ disabled }) => (disabled ? 'not-allowed' : 'pointer')};
+  cursor: ${({ disabled, $muted }) => (disabled || $muted ? 'not-allowed' : 'pointer')};
 `;
 
 export const CloseButton = styled.div`
