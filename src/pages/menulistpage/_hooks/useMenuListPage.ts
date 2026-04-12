@@ -37,7 +37,10 @@ interface SetMenuItem extends BaseMenuItem {
 const useMenuListPage = () => {
   const navigate = useNavigate();
   const itemCount = useCartSnapshotStore((s) => s.itemCount);
+  const snapshot = useCartSnapshotStore((s) => s.snapshot);
   const cartCount = itemCount > 0;
+  const isCartPending =
+    String(snapshot?.cart?.status ?? '').toLowerCase() === 'pending_payment';
 
   const [menuItems, setMenuItems] = useState<any[]>([]);
   const [boothName, setBoothName] = useState<string>('');
@@ -65,6 +68,7 @@ const useMenuListPage = () => {
 
   const [count, setCount] = useState(1);
   const [showToast, setShowToast] = useState(false);
+  const [pendingToast, setPendingToast] = useState(false);
 
   const resetCount = () => setCount(1);
   const isMin = count <= 1;
@@ -210,6 +214,13 @@ const useMenuListPage = () => {
     }
   }, [showToast]);
 
+  useEffect(() => {
+    if (pendingToast) {
+      const timeout = setTimeout(() => setPendingToast(false), 2000);
+      return () => clearTimeout(timeout);
+    }
+  }, [pendingToast]);
+
   const handleScrollTo = (category: 'tableFee' | 'set' | 'menu' | 'drink') => {
     setSelectedCategory(category);
     const target = sectionRefs[category].current;
@@ -269,6 +280,10 @@ const useMenuListPage = () => {
       return;
     }
     if (count <= 0) return;
+    if (isCartPending) {
+      setPendingToast(true);
+      return;
+    }
 
     try {
       await cartApiV3.add({
@@ -343,7 +358,8 @@ const useMenuListPage = () => {
     showToast,
     handleDecrease,
     handleIncrease,
-    errorToast, // 빌드오류해결을 위해 읽히지 않고 있는값 추가
+    errorToast,
+    pendingToast,
   };
 };
 

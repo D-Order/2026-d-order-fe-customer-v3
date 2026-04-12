@@ -252,6 +252,13 @@ const useShoppingCartPage = () => {
     setPaymentModalLoading(false);
     setPaymentModalError(null);
     setAccountInfo(null);
+
+    // pending_payment 상태면 서버에 취소 요청하여 active로 복귀
+    if (cartStatus === 'pending_payment') {
+      cartApiV3.paymentCancel().catch((err) => {
+        console.error('[ShoppingCart] payment-cancel 실패:', err);
+      });
+    }
   };
 
   const Pay = (price: number, code?: string) => {
