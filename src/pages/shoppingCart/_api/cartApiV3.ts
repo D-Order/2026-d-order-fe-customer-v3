@@ -264,6 +264,25 @@ export const cartApiV3 = {
   },
 
   /**
+   * 결제 대기 취소 (pending_payment → active 복귀)
+   * POST /api/v3/django/cart/payment-cancel/
+   * body: { table_usage_id }
+   */
+  paymentCancel: async () => {
+    const boothId = getBoothId();
+    const tableUsageId = getTableUsageId();
+    if (!boothId || !tableUsageId)
+      throw new Error('booth_id 또는 table_usage_id 없음');
+
+    const res = await instance.post(
+      '/api/v3/django/cart/payment-cancel/',
+      { table_usage_id: tableUsageId },
+      { headers: { 'Booth-ID': boothId } },
+    );
+    return res.data;
+  },
+
+  /**
    * 장바구니 초기화 (주문 완료 후 다음 라운드 시작)
    * POST /api/v3/django/cart/reset/
    * ORDERED → ACTIVE (round+1)
