@@ -40,6 +40,7 @@ const MenulistPage = () => {
     showToast,
     handleIncrease,
     handleDecrease,
+    pendingToast,
   } = useMenuListPage();
 
   const navigate = useNavigate();
@@ -78,6 +79,7 @@ const MenulistPage = () => {
           isMin={isMin}
           isMax={isMax}
           showToast={showToast}
+          pendingToast={pendingToast}
           onIncrease={handleIncrease}
           onDecrease={handleDecrease}
         />
