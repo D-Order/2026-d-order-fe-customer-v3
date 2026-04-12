@@ -19,6 +19,7 @@ interface MenuAssignModalProps {
   isMin: boolean;
   isMax: boolean;
   showToast: boolean;
+  pendingToast?: boolean;
   onDecrease: () => void;
   onIncrease: () => void;
   onClose: () => void;
@@ -32,6 +33,7 @@ const MenuAssignModal = ({
   isMin,
   isMax,
   showToast,
+  pendingToast,
   onDecrease,
   onIncrease,
   onClose,
@@ -95,6 +97,12 @@ const MenuAssignModal = ({
         <S.Toast>
           <S.ToastIcon src={MENULISTPAGE_CONSTANTS.ASSIGNMODAL.IMAGES.NOTICE} />
           {MENULISTPAGE_CONSTANTS.ASSIGNMODAL.TEXT.Toast(item.quantity)}
+        </S.Toast>
+      )}
+      {pendingToast && (
+        <S.Toast>
+          <S.ToastIcon src={MENULISTPAGE_CONSTANTS.ASSIGNMODAL.IMAGES.NOTICE} />
+          다른 사용자가 결제 중입니다.
         </S.Toast>
       )}
     </S.Wrapper>
