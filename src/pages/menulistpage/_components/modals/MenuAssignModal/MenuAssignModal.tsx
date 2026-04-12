@@ -20,6 +20,7 @@ interface MenuAssignModalProps {
   isMax: boolean;
   showToast: boolean;
   pendingToast?: boolean;
+  isCartPending?: boolean;
   onDecrease: () => void;
   onIncrease: () => void;
   onClose: () => void;
@@ -34,6 +35,7 @@ const MenuAssignModal = ({
   isMax,
   showToast,
   pendingToast,
+  isCartPending,
   onDecrease,
   onIncrease,
   onClose,
@@ -88,7 +90,7 @@ const MenuAssignModal = ({
               </S.QuantityButton>
             </S.QuantityBox>
           </S.Row2>
-          <S.SubmitButton disabled={isMax} onClick={onSubmit}>
+          <S.SubmitButton disabled={isMax} $muted={!!isCartPending} onClick={onSubmit}>
             {MENULISTPAGE_CONSTANTS.ASSIGNMODAL.TEXT.DAM}
           </S.SubmitButton>
         </S.Col>
