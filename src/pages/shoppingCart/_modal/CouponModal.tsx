@@ -6,9 +6,9 @@ import { IMAGE_CONSTANTS } from '@constants/ImageConstants';
 
 interface CouponModalProps {
   onClose: () => void;
-  CheckCoupon: (code: string) => Promise<any>;
+  CheckCoupon: (code: string) => Promise<unknown>;
   appliedCoupon: boolean;
-  setAppliedCoupon: React.Dispatch<SetStateAction<boolean>>;
+  setAppliedCoupon: () => void;
   couponCode: string;
   setCouponCode: React.Dispatch<SetStateAction<string>>;
   couponName: string;
@@ -32,6 +32,7 @@ const CouponModal = ({
   couponType,
 }: CouponModalProps) => {
   const [couponError, setCouponError] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const handleApply = async () => {
     if (!couponCode.trim()) return;
@@ -39,13 +40,16 @@ const CouponModal = ({
 
     try {
       if (appliedCoupon) return;
+      setSubmitting(true);
       const result = await CheckCoupon(couponCode);
-      setCouponName(result.data.coupon_name);
+      const payload = result as {
+        data?: { coupon_name?: string; discount_type?: string };
+      };
+      setCouponName(String(payload?.data?.coupon_name ?? ''));
       setUsingCoupon(couponCode);
-      setCouponType(result.data.discount_type);
+      setCouponType(String(payload?.data?.discount_type ?? ''));
       setCouponCode('');
       setCouponError(false);
-      onClose();
     } catch {
       setCouponError(true);
       toast.error('해당 번호의 쿠폰이 존재하지 않아요!', {
@@ -61,6 +65,8 @@ const CouponModal = ({
           zIndex: 100,
         },
       });
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -71,8 +77,8 @@ const CouponModal = ({
 
   const isDisabled = couponCode === '' || appliedCoupon;
   const handleDeleteCoupon = () => {
-    setAppliedCoupon(false);
-    setUsingCoupon('');
+    if (submitting) return;
+    setAppliedCoupon();
   };
   return (
     <Wrapper>
@@ -103,7 +109,7 @@ const CouponModal = ({
                 id="coupon"
               />
               <div>
-                {couponName}
+                {couponName?.trim() ? couponName : '쿠폰'}
                 <img
                   src={IMAGE_CONSTANTS.XICON}
                   alt="쿠폰 적용 취소하기"
@@ -118,7 +124,7 @@ const CouponModal = ({
       <ButtonContainer>
         <CancelButton onClick={onClose}>취소</CancelButton>
         <Divider />
-        <ApplyButton onClick={handleApply} disabled={isDisabled}>
+        <ApplyButton onClick={handleApply} disabled={isDisabled || submitting}>
           쿠폰 적용
         </ApplyButton>
       </ButtonContainer>
@@ -199,21 +205,21 @@ const CouponWraper = styled.div`
   align-items: center;
   border: 1px solid ${({ theme }) => theme.colors.Orange01};
   width: 100%;
-  ${({ theme }) => theme.fonts.SemiBold10}
+  ${({ theme }) => theme.fonts.SemiBold12}
   box-sizing: border-box;
   border-radius: 4px;
   padding: 4px;
-  margin-top: 4px;
+  margin-top: 8px;
   div {
     display: flex;
     flex-direction: row;
     justify-content: center;
     align-items: center;
-    gap: 4px;
+    gap: 8px;
   }
   #coupon {
     width: 32px;
-    padding: 8px 0;
+    padding: 8px;
   }
   #close {
     cursor: pointer;

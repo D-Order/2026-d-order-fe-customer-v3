@@ -175,21 +175,21 @@ export const cartApiV3 = {
   /**
    * 쿠폰 적용 취소
    * POST /api/v3/django/coupon/apply-coupon/
-   * body: { table_usage_id } (백엔드에서 취소 분기 처리)
+   * body: { table_usage_id, coupon_code } (백엔드가 coupon_code를 필수로 요구)
    */
-  cancelCoupon: async () => {
+  cancelCoupon: async (couponCode: string) => {
     const boothId = getBoothId();
     const tableUsageId = getTableUsageId();
     if (!boothId || !tableUsageId)
       throw new Error('booth_id 또는 table_usage_id 없음');
 
-    const res = await instance.post(
-      '/api/v3/django/coupon/apply-coupon/',
-      {
-        table_usage_id: tableUsageId,
-      },
-      { headers: { 'Booth-ID': boothId } },
-    );
+    const code = String(couponCode ?? '').trim();
+    if (!code) throw new Error('coupon_code가 필요합니다.');
+
+    const res = await instance.delete('/api/v3/django/coupon/apply-coupon/', {
+      headers: { 'Booth-ID': boothId },
+      data: { table_usage_id: tableUsageId, coupon_code: code },
+    });
     return res.data;
   },
 

@@ -50,10 +50,19 @@ export interface CartItem {
   menu_id: number | null;
   set_menu_id: number | null;
   name: string;
+  image?: string | null;
   unit_price: number;
   quantity: number;
   line_price: number;
   is_sold_out: boolean;
+}
+
+export interface FeePolicy {
+  seat_type: "PP" | "PT" | "NO" | string;
+  is_first_round: boolean;
+  has_fee_item: boolean;
+  fee_required: boolean;
+  fee_addable: boolean;
 }
 
 export interface CartCoupon {
@@ -62,7 +71,7 @@ export interface CartCoupon {
   coupon_code: string | null;
   discount_type: string | null;
   discount_value: number | null;
-  discount_amount: number;
+  discount_amount: number | null;
 }
 
 export interface CartSummary {
@@ -74,6 +83,7 @@ export interface CartSummary {
 export interface CartSnapshotData {
   table_usage: TableUsage;
   cart: CartInfo;
+  fee_policy?: FeePolicy;
   items: CartItem[];
   coupon: CartCoupon;
   summary: CartSummary;
