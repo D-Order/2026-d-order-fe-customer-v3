@@ -49,11 +49,14 @@ function parsePaymentInfoResponse(response: unknown): accountInfoType | null {
 }
 
 /** v3 CartItem → 장바구니 UI용 Menu 형태로 변환 */
-function cartItemToMenu(item: CartItem): Menu {
+function cartItemToMenu(item: CartItem, seatType: string | undefined): Menu {
+  const seat = String(seatType ?? '').toUpperCase();
   return {
     id: item.id,
     is_soldout: item.is_sold_out,
-    menu_amount: 99,
+    // 최대수량: 기본 99, 단 PT(테이블당) 테이블 이용료는 1개
+    menu_amount: item.type === 'fee' && seat === 'PT' ? 1 : 99,
+    menu_image: item.image ?? undefined,
     menu_name: item.name,
     menu_price: item.unit_price,
     min_menu_amount: 1,
@@ -67,16 +70,6 @@ const useShoppingCartPage = () => {
   const navigate = useNavigate();
   const snapshot = useCartSnapshotStore((s) => s.snapshot);
   const setSnapshot = useCartSnapshotStore((s) => s.setSnapshot);
-
-  /** GET /api/v3/django/cart/detail/ 로 스냅샷 동기화 */
-  const refreshCartFromDetail = useCallback(async () => {
-    try {
-      const snap = await cartApiV3.getDetail();
-      if (snap) setSnapshot(snap);
-    } catch (e) {
-      console.error('[cart/detail]', e);
-    }
-  }, [setSnapshot]);
 
   useEffect(() => {
     let cancelled = false;
@@ -118,23 +111,30 @@ const useShoppingCartPage = () => {
     () =>
       (snapshot?.items ?? [])
         .filter((i) => i.type === 'menu' || i.type === 'fee')
-        .map(cartItemToMenu),
-    [snapshot?.items],
+        .map((it) => cartItemToMenu(it, snapshot?.fee_policy?.seat_type)),
+    [snapshot?.items, snapshot?.fee_policy?.seat_type],
   );
   const setMenusFromSnapshot = useMemo(
     () =>
       (snapshot?.items ?? [])
         .filter((i) => i.type === 'setmenu')
-        .map(cartItemToMenu),
-    [snapshot?.items],
+        .map((it) => cartItemToMenu(it, snapshot?.fee_policy?.seat_type)),
+    [snapshot?.items, snapshot?.fee_policy?.seat_type],
   );
 
-  const totalPrice = snapshot?.summary?.total ?? 0;
+  // 가격/할인은 WS 스냅샷 summary 기준으로만 사용 (REST 응답과 불일치/nullable 이슈 방지)
   const originalPrice = snapshot?.summary?.subtotal ?? 0;
-  const appliedCoupon = snapshot?.coupon?.applied ?? false;
+  const discountTotal = snapshot?.summary?.discount_total ?? 0;
+  const totalPriceRaw =
+    snapshot?.summary?.total ?? originalPrice - discountTotal;
+  const totalPrice = Math.max(0, totalPriceRaw);
+
+  const appliedCoupon =
+    discountTotal > 0 || (snapshot?.coupon?.applied ?? false);
   const couponName = snapshot?.coupon?.coupon_code ?? undefined;
-  const discountAmount = snapshot?.coupon?.discount_amount ?? 0;
   const discountType = snapshot?.coupon?.discount_type ?? 'percent';
+  // 기존 props 호환용(화면에서 실사용하지 않도록): 쿠폰 discount_amount 대신 discount_total 사용
+  const discountAmount = discountTotal;
   const cartStatus = String(snapshot?.cart?.status ?? '').toLowerCase();
   const isOrderable = cartStatus === 'active';
 
@@ -158,6 +158,9 @@ const useShoppingCartPage = () => {
 
   const shoppingItemResponse = useMemo(() => {
     if (!snapshot) return undefined;
+    const tableFee = (snapshot.items ?? [])
+      .filter((i) => i.type === 'fee')
+      .reduce((acc, cur) => acc + (Number(cur.line_price) || 0), 0);
     return {
       data: {
         cart: {
@@ -168,14 +171,14 @@ const useShoppingCartPage = () => {
           table_num: snapshot.table_usage.table_num,
         },
         subtotal: snapshot.summary.subtotal,
-        table_fee: 0,
+        table_fee: tableFee,
         total_price: snapshot.summary.total,
       },
     };
   }, [snapshot, menusFromSnapshot, setMenusFromSnapshot]);
 
   const FetchShoppingItems = () => {
-    void refreshCartFromDetail();
+    // 화면 갱신은 WS 스냅샷 기준 (REST 재조회는 깜빡임/불일치 원인)
   };
 
   const increaseQuantity = async (id: number) => {
@@ -183,7 +186,6 @@ const useShoppingCartPage = () => {
     if (!item || item.quantity < 1) return;
     try {
       await cartApiV3.updateQuantity(id, item.quantity + 1);
-      await refreshCartFromDetail();
     } catch (err) {
       console.error(err);
     }
@@ -194,7 +196,6 @@ const useShoppingCartPage = () => {
     if (!item || item.quantity <= 1) return;
     try {
       await cartApiV3.updateQuantity(id, item.quantity - 1);
-      await refreshCartFromDetail();
     } catch (err) {
       console.error(err);
     }
@@ -203,7 +204,6 @@ const useShoppingCartPage = () => {
   const deleteItem = async (id: number) => {
     try {
       await cartApiV3.deleteItem(id);
-      await refreshCartFromDetail();
     } catch (err) {
       console.error(err);
     }
@@ -288,6 +288,7 @@ const useShoppingCartPage = () => {
     try {
       const res = await cartApiV3.applyCoupon(code);
       setAppliedCouponCode(code.trim());
+      // 쿠폰 적용/가격 반영은 WS 스냅샷 기준으로만 처리한다.
       return res;
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })
@@ -322,6 +323,7 @@ const useShoppingCartPage = () => {
     totalPrice,
     originalPrice,
     discountAmount,
+    discountTotal,
     appliedCoupon,
     discountType,
     couponName,
@@ -342,8 +344,14 @@ const useShoppingCartPage = () => {
     isCouponModal,
     CheckCoupon,
     setAppliedCoupon: () => {
-      setAppliedCouponCode(null);
-      cartApiV3.cancelCoupon().catch(console.error);
+      const code =
+        appliedCouponCode ?? snapshot?.coupon?.coupon_code ?? '';
+      cartApiV3
+        .cancelCoupon(code)
+        .then(() => {
+          setAppliedCouponCode(null);
+        })
+        .catch(console.error);
     },
     appliedCouponCode,
     cartStatus,
