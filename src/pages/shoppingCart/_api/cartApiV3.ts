@@ -264,6 +264,31 @@ export const cartApiV3 = {
   },
 
   /**
+   * POST /api/v3/spring/server/staffcall/delete
+   * body: { staffCallId, subscribeToken }
+   */
+  deleteStaffCall: async (params: {
+    staffCallId: number;
+    subscribeToken: string;
+  }) => {
+    const boothId = getBoothId();
+    if (!boothId) throw new Error('Booth-ID가 없습니다.');
+
+    const staffCallId = Number(params.staffCallId);
+    const subscribeToken = String(params.subscribeToken ?? '').trim();
+    if (!Number.isFinite(staffCallId))
+      throw new Error('staffCallId가 유효하지 않습니다.');
+    if (!subscribeToken) throw new Error('subscribeToken이 필요합니다.');
+
+    const res = await instance.post(
+      '/api/v3/spring/server/staffcall/delete',
+      { staffCallId, subscribeToken },
+      { headers: { 'Booth-ID': boothId } },
+    );
+    return res.data;
+  },
+
+  /**
    * 결제 대기 취소 (pending_payment → active 복귀)
    * POST /api/v3/django/cart/payment-cancel/
    * body: { table_usage_id }
