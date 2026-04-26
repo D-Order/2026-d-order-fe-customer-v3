@@ -19,7 +19,8 @@ export const MENULISTPAGE_CONSTANTS = {
       MINUS: '-',
       PLUS: '+',
       DAM: '장바구니 담기',
-      Toast: (max: number) => `현재 최대 ${max}개까지만 주문할 수 있어요!`,
+      Toast: (max: number) =>
+        max === 1 ? '테이블 이용료는 1개만 주문할 수 있어요!' : `현재 최대 ${max}개까지만 주문할 수 있어요!`,
     },
   },
   LISTPAGEHEADER: {

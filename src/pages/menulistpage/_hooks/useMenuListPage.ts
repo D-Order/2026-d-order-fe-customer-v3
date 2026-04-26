@@ -65,6 +65,7 @@ const useMenuListPage = () => {
   const [isModalOpen2, setIsModalOpen2] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const [tableNum, setTableNum] = useState<number | null>(null);
+  const [seatType, setSeatType] = useState<string | null>(null);
 
   const [count, setCount] = useState(1);
   const [showToast, setShowToast] = useState(false);
@@ -72,8 +73,15 @@ const useMenuListPage = () => {
 
   const resetCount = () => setCount(1);
   const isMin = count <= 1;
-  const isMax = selectedItem ? count > selectedItem.quantity : false;
-  const isMax2 = selectedItem ? count >= selectedItem.quantity : false;
+  /**
+   * 최대 수량 제한은 더 이상 받지 않음.
+   * 단, 테이블비가 PP(=person)인 경우에만 1개로 제한.
+   */
+  const isSeatFeePP =
+    selectedItem?.category === 'tableFee' &&
+    (String(seatType ?? '').toUpperCase() === 'PP' || seatType === 'person');
+  const isMax = isSeatFeePP ? count > 1 : false;
+  const isMax2 = isSeatFeePP ? count >= 1 : false;
 
   const [isLoading, setIsLoading] = useState(true);
 
@@ -97,11 +105,12 @@ const useMenuListPage = () => {
         // API 호출 (data.FEE / SET / MENU / DRINK 구조)
         const payload = await MenuListService.fetchAllMenus(boothIdNumber);
 
-        const { data, booth_name, table_info } = payload;
+        const { data, booth_name, table_info, seat_type } = payload;
         const NON_IMG = MENULISTPAGE_CONSTANTS.MENUITEMS.IMAGES.NONIMAGE;
 
         setTableNum(table_info?.table_number ?? tableNumber);
         setBoothName(booth_name ?? '');
+        setSeatType(seat_type ?? null);
 
         // 1) 테이블 이용료 (data.FEE)
         const feeItem = data?.FEE?.[0];
@@ -113,7 +122,12 @@ const useMenuListPage = () => {
             description: feeItem.description,
             price: feeItem.price,
             imageUrl: feeItem.image ?? NON_IMG,
-            quantity: 1,
+            // PP일 때만 1개로 제한, 그 외엔 제한 없음
+            quantity:
+              String(seat_type ?? '').toUpperCase() === 'PP' ||
+              seat_type === 'person'
+                ? 1
+                : 100,
             soldOut: feeItem.is_soldout,
             category: 'tableFee',
           };
@@ -130,7 +144,7 @@ const useMenuListPage = () => {
           originprice: s.origin_price,
           price: s.price,
           imageUrl: s.image ?? undefined,
-          quantity: 1,
+          quantity: 100,
           soldOut: !!s.is_soldout,
           category: 'set',
           menuItems: s.menu_items ?? [],
@@ -203,6 +217,7 @@ const useMenuListPage = () => {
   const handleIncrease = () => {
     if (isMax2) {
       setShowToast(true);
+      return;
     }
     setCount((prev) => prev + 1);
   };

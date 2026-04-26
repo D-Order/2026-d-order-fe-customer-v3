@@ -19,7 +19,7 @@ export const ShoppingListEmpty = styled.div`
   height: calc(var(--vh, 1vh) * 100 - 98px - 200px);
 
   img {
-    width: 60%;
+    width: 40%;
   }
   p {
     color: ${({ theme }) => theme.colors.Black01};

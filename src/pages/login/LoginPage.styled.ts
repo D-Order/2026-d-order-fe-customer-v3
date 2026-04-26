@@ -8,8 +8,8 @@ export const LoginWrapper = styled.div`
   width: 100%;
   min-height: calc(var(--vh, 1vh) * 100);
 
-  padding-top: 145px;
-  padding-bottom: 23px;
+  /* padding-top: 145px;
+  padding-bottom: 23px; */
   box-sizing: border-box;
 
   justify-content: space-around;

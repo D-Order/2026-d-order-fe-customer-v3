@@ -111,6 +111,8 @@ const useShoppingCartPage = () => {
   /** payment-info 중복 호출 방지(더블탭 등). 닫기 시 generation 올려서 늦게 도착한 응답 무시 */
   const paymentInfoRequestId = useRef(0);
   const paymentInfoInFlight = useRef(false);
+  /** getPaymentInfo() 성공 → 서버가 이미 pending_payment로 전환했음을 추적 */
+  const paymentInfoSucceeded = useRef(false);
 
   const menusFromSnapshot = useMemo(
     () =>
@@ -217,9 +219,12 @@ const useShoppingCartPage = () => {
     setPaymentModalLoading(true);
     setPaymentModalError(null);
     setAccountInfo(null);
+    paymentInfoSucceeded.current = false;
     try {
       const response = await cartApiV3.getPaymentInfo();
       if (reqId !== paymentInfoRequestId.current) return;
+      // API 성공 = 서버가 이미 pending_payment로 전환한 상태
+      paymentInfoSucceeded.current = true;
       const info = parsePaymentInfoResponse(response);
       if (info) {
         setAccountInfo(info);
@@ -253,8 +258,9 @@ const useShoppingCartPage = () => {
     setPaymentModalError(null);
     setAccountInfo(null);
 
-    // pending_payment 상태면 서버에 취소 요청하여 active로 복귀
-    if (cartStatus === 'pending_payment') {
+    // 서버가 이미 pending_payment로 전환했으면 취소 요청 (WS 이벤트 도착 전에도 동작)
+    if (cartStatus === 'pending_payment' || paymentInfoSucceeded.current) {
+      paymentInfoSucceeded.current = false;
       cartApiV3.paymentCancel().catch((err) => {
         console.error('[ShoppingCart] payment-cancel 실패:', err);
       });
@@ -269,6 +275,7 @@ const useShoppingCartPage = () => {
     if (cartId != null) params.set('cart_id', String(cartId));
     paymentInfoRequestId.current += 1;
     paymentInfoInFlight.current = false;
+    paymentInfoSucceeded.current = false;
     setIsSendMoneyModal(false);
     setPaymentModalLoading(false);
     setPaymentModalError(null);

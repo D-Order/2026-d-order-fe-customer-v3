@@ -84,7 +84,7 @@ const ShoppingCartPage = () => {
   return (
     <S.Wrapper>
       <ShoppingHeader
-        text='장바구니'
+        text="장바구니"
         goBack={() => {
           navigate(ROUTE_CONSTANTS.MENULIST);
         }}
@@ -92,7 +92,7 @@ const ShoppingCartPage = () => {
 
       {menus.length === 0 && setMenus.length === 0 ? (
         <S.ShoppingListEmpty>
-          <img src={Character} alt='이미지' />
+          <img src={Character} alt="이미지" />
           <p>아직 장바구니에 담긴 메뉴가 없어요.</p>
         </S.ShoppingListEmpty>
       ) : (
@@ -148,9 +148,6 @@ const ShoppingCartPage = () => {
             accountInfo={accountInfo}
             paymentLoading={paymentModalLoading}
             paymentError={paymentModalError}
-            onRetryLoadAccount={() => {
-              void CheckAccount();
-            }}
             usingCoupon={usingCoupon}
             onRequestTransferConfirmation={requestPaymentConfirmation}
           />
