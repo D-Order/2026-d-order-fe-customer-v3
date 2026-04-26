@@ -69,6 +69,12 @@ instance.interceptors.response.use(
         .then(() => instance.request(config));
     }
 
+    // 테이블 세션 만료 → 로그인 화면으로 리디렉션
+    if (status === 410) {
+      const boothId = localStorage.getItem('boothId');
+      window.location.href = boothId ? `/?id=${boothId}` : '/';
+    }
+
     return Promise.reject(error);
   },
 );
