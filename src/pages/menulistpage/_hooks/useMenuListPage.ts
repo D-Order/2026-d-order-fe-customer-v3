@@ -65,7 +65,6 @@ const useMenuListPage = () => {
   const [isModalOpen2, setIsModalOpen2] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const [tableNum, setTableNum] = useState<number | null>(null);
-  const [seatType, setSeatType] = useState<string | null>(null);
 
   const [count, setCount] = useState(1);
   const [showToast, setShowToast] = useState(false);
