@@ -80,16 +80,12 @@ const ShoppingItem = ({
               <button
                 onClick={onIncrease}
                 disabled={
-                  item.quantity === item.menu_amount ||
-                  item.menu_name === "테이블 이용료(테이블당)"
+                  item.quantity === item.menu_amount
                 }
               >
                 <img
                   src={
-                    item.quantity === item.menu_amount ||
-                    item.menu_name === "테이블 이용료(테이블당)"
-                      ? PlusDisable
-                      : plus
+                    item.quantity === item.menu_amount ? PlusDisable : plus
                   }
                   alt="수량 증가"
                 />
