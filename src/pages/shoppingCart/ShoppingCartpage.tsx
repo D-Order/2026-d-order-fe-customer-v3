@@ -47,6 +47,8 @@ const ShoppingCartPage = () => {
     CheckCoupon,
     setAppliedCoupon,
     isOrderable,
+    couponName: snapshotCouponName,
+    discountType: snapshotDiscountType,
   } = useShoppingCartPage();
 
   // 계좌 복사 버튼
@@ -81,6 +83,20 @@ const ShoppingCartPage = () => {
       setSetMenu(shoppingItemResponse.data.cart.set_menus || []);
     }
   }, [shoppingItemResponse]);
+
+  // 스냅샷 기준 쿠폰 정보 동기화 (수량 변경 등으로 detail 재조회돼도 UI가 풀린 것처럼 보이지 않게)
+  useEffect(() => {
+    if (!appliedCoupon) {
+      setCouponName('');
+      setUsingCoupon('');
+      setCouponType('');
+      return;
+    }
+    const code = snapshotCouponName ?? '';
+    setCouponName(code);
+    setUsingCoupon(code);
+    setCouponType(String(snapshotDiscountType ?? ''));
+  }, [appliedCoupon, snapshotCouponName, snapshotDiscountType]);
   return (
     <S.Wrapper>
       <ShoppingHeader
@@ -165,7 +181,8 @@ const ShoppingCartPage = () => {
             setAppliedCoupon={setAppliedCoupon}
             couponCode={couponCode}
             setCouponCode={setCouponCode}
-            couponName={couponName}
+            // 적용된 쿠폰 표시는 WS 스냅샷(coupon_code) 기준
+            couponName={snapshotCouponName ?? couponName}
             setCouponName={setCouponName}
             setUsingCoupon={setUsingCoupon}
             setCouponType={setCouponType}
