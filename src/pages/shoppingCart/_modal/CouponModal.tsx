@@ -50,6 +50,7 @@ const CouponModal = ({
       setCouponType(String(payload?.data?.discount_type ?? ''));
       setCouponCode('');
       setCouponError(false);
+      onClose();
     } catch {
       setCouponError(true);
       toast.error('해당 번호의 쿠폰이 존재하지 않아요!', {

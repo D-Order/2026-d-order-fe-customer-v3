@@ -1,5 +1,5 @@
 import styled from 'styled-components';
-import CharacterLogo from '@assets/images/character.svg?react'; // SVG 컴포넌트 임포트
+import CharacterLogo from '@assets/images/characterV3.svg?react';
 
 export const Wrapper = styled.div`
   display: flex;
@@ -70,7 +70,7 @@ export const LottieWrapper = styled.div`
 
 export const Logo = styled(CharacterLogo)`
   display: flex;
-  width: 191px;
+  width: 150px;
   height: auto;
   position: absolute; // 절대 위치로 변경
   top: 50%; // 상단에서 50% 위치
