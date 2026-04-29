@@ -49,13 +49,11 @@ function parsePaymentInfoResponse(response: unknown): accountInfoType | null {
 }
 
 /** v3 CartItem → 장바구니 UI용 Menu 형태로 변환 */
-function cartItemToMenu(item: CartItem, seatType: string | undefined): Menu {
-  const seat = String(seatType ?? '').toUpperCase();
+function cartItemToMenu(item: CartItem): Menu {
   return {
     id: item.id,
     is_soldout: item.is_sold_out,
-    // 최대수량: 기본 99, 단 PT(테이블당) 테이블 이용료는 1개
-    menu_amount: item.type === 'fee' && seat === 'PT' ? 1 : 99,
+    menu_amount: 99,
     menu_image: item.image ?? undefined,
     menu_name: item.name,
     menu_price: item.unit_price,
@@ -111,15 +109,15 @@ const useShoppingCartPage = () => {
     () =>
       (snapshot?.items ?? [])
         .filter((i) => i.type === 'menu' || i.type === 'fee')
-        .map((it) => cartItemToMenu(it, snapshot?.fee_policy?.seat_type)),
-    [snapshot?.items, snapshot?.fee_policy?.seat_type],
+        .map((it) => cartItemToMenu(it)),
+    [snapshot?.items],
   );
   const setMenusFromSnapshot = useMemo(
     () =>
       (snapshot?.items ?? [])
         .filter((i) => i.type === 'setmenu')
-        .map((it) => cartItemToMenu(it, snapshot?.fee_policy?.seat_type)),
-    [snapshot?.items, snapshot?.fee_policy?.seat_type],
+        .map((it) => cartItemToMenu(it)),
+    [snapshot?.items],
   );
 
   // 가격/할인은 WS 스냅샷 summary 기준으로만 사용 (REST 응답과 불일치/nullable 이슈 방지)
@@ -344,8 +342,7 @@ const useShoppingCartPage = () => {
     isCouponModal,
     CheckCoupon,
     setAppliedCoupon: () => {
-      const code =
-        appliedCouponCode ?? snapshot?.coupon?.coupon_code ?? '';
+      const code = appliedCouponCode ?? snapshot?.coupon?.coupon_code ?? '';
       cartApiV3
         .cancelCoupon(code)
         .then(() => {
