@@ -12,6 +12,7 @@ export const Wrapper = styled.div`
   padding: 1rem;
   gap: 1.5rem;
   background-color: ${({ theme }) => theme.colors.Bg};
+  box-shadow: 0 4px 4px -4px rgba(0, 0, 0, 0.1);
   z-index: 1;
 `;
 
@@ -39,13 +40,15 @@ export const SelectCategory = styled.div`
 `;
 
 export const Category = styled.div`
-  ${({ theme }) => theme.fonts.ExtraBold14};
-  color: ${({ theme }) => theme.colors.Black01};
+  ${({ theme }) => theme.fonts.Bold14};
+  color: ${({ theme }) => theme.colors.Black02};
 
   cursor: pointer;
 
   &.selected {
-    padding-bottom: 8px;
-    border-bottom: 1px solid ${({ theme }) => theme.colors.Black02};
+    padding-bottom: 6px;
+    ${({ theme }) => theme.fonts.ExtraBold14};
+    color: ${({ theme }) => theme.colors.Black01};
+    border-bottom: 1px solid ${({ theme }) => theme.colors.Focused};
   }
 `;
