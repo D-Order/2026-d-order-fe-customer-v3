@@ -27,11 +27,11 @@ const ShoppingFooter = ({
         </CouponBtn>
       </CouponWrapper>
       <PriceRow>
-        <p id="totalPrice">💵 총 주문금액</p>
+        <p id='totalPrice'>💵 총 주문금액</p>
         <PriceContainer>
           {appliedCoupon && (
             <OriginalPrice>
-              {originalPrice.toLocaleString('ko-KR')}
+              {originalPrice.toLocaleString('ko-KR')}원
             </OriginalPrice>
           )}
           <PriceText>{totalPrice.toLocaleString('ko-KR')}원</PriceText>
@@ -125,4 +125,3 @@ const PriceText = styled.p`
   color: ${({ theme }) => theme.colors.Orange01};
   ${({ theme }) => theme.fonts.ExtraBold16}
 `;
-
