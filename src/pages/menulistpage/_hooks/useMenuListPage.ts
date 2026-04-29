@@ -72,7 +72,6 @@ const useMenuListPage = () => {
 
   const resetCount = () => setCount(1);
   const isMin = count <= 1;
-  // 최대 수량: 기본 99, 단 PT(테이블당) 테이블 이용료는 1개
   const isMax = selectedItem ? count > selectedItem.quantity : false;
   const isMax2 = selectedItem ? count >= selectedItem.quantity : false;
 
@@ -99,10 +98,6 @@ const useMenuListPage = () => {
         const payload = await MenuListService.fetchAllMenus(boothIdNumber);
 
         const { data, booth_name, table_info } = payload;
-        const seat_type =
-          snapshot?.fee_policy?.seat_type ??
-          (table_info as unknown as { seat_type?: string } | undefined)
-            ?.seat_type;
         const NON_IMG = MENULISTPAGE_CONSTANTS.MENUITEMS.IMAGES.NONIMAGE;
 
         setTableNum(table_info?.table_number ?? tableNumber);
@@ -118,12 +113,7 @@ const useMenuListPage = () => {
             description: feeItem.description,
             price: feeItem.price,
             imageUrl: feeItem.image ?? NON_IMG,
-            // 최대수량: 기본 99, 단 PT(테이블당) 테이블 이용료는 1개
-            quantity:
-              String(seat_type ?? '').toUpperCase() === 'PT' ||
-              seat_type === 'table'
-                ? 1
-                : 99,
+            quantity: 99,
             soldOut: feeItem.is_soldout,
             category: 'tableFee',
           };

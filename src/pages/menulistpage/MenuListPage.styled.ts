@@ -18,4 +18,5 @@ export const DorderDevelopers = styled.img`
 
   box-sizing: border-box;
   padding: 0rem 1rem 1rem 1rem;
+  cursor: pointer;
 `;
