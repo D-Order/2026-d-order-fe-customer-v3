@@ -67,23 +67,6 @@ function cartItemToMenu(item: CartItem): Menu {
 const useShoppingCartPage = () => {
   const navigate = useNavigate();
   const snapshot = useCartSnapshotStore((s) => s.snapshot);
-  const setSnapshot = useCartSnapshotStore((s) => s.setSnapshot);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const snap = await cartApiV3.getDetail();
-        if (cancelled) return;
-        if (snap) setSnapshot(snap);
-      } catch (e) {
-        if (!cancelled) console.error('[cart/detail] mount', e);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [setSnapshot]);
 
   const [errorMessage] = useState<string | null>(null);
   const [accountInfo, setAccountInfo] = useState<accountInfoType | null>(null);

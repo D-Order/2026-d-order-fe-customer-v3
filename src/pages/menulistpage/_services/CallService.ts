@@ -8,11 +8,7 @@ export const CallService = {
     const boothId = localStorage.getItem('boothId');
     if (!boothId) throw new Error('Booth-ID가 없습니다.');
 
-    let snap = useCartSnapshotStore.getState().snapshot;
-    if (!snap?.table_usage?.table_id || !snap?.cart?.id) {
-      snap = await cartApiV3.getDetail();
-      if (snap) useCartSnapshotStore.getState().setSnapshot(snap);
-    }
+    const snap = useCartSnapshotStore.getState().snapshot;
 
     const tableId = snap?.table_usage?.table_id;
     const cartId = snap?.cart?.id;

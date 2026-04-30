@@ -175,16 +175,6 @@ const useMenuListPage = () => {
 
         const allItemsSorted = sortByPriceDesc(allItems, (i) => i.price);
         setMenuItems(allItemsSorted);
-
-        const tu = localStorage.getItem('tableUsageId');
-        if (tu && /^\d+$/.test(tu)) {
-          try {
-            const snap = await cartApiV3.getDetail();
-            if (snap) useCartSnapshotStore.getState().setSnapshot(snap);
-          } catch {
-            /* 장바구니 없음·미생성 등 */
-          }
-        }
       } catch (e) {
         console.error(e);
         setMenuItems([]);
@@ -299,13 +289,6 @@ const useMenuListPage = () => {
           : { menu_id: selectedItem.id }),
         quantity: count,
       });
-
-      try {
-        const snap = await cartApiV3.getDetail();
-        if (snap) useCartSnapshotStore.getState().setSnapshot(snap);
-      } catch {
-        /* WS로도 갱신될 수 있음 */
-      }
 
       // 기존 UX 흐름 유지
       setIsClosing(true);
