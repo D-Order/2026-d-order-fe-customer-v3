@@ -35,7 +35,7 @@ export type MenuListApiResponse = {
 };
 
 export const MenuListService = {
-  fetchAllMenus: async (boothId: number): Promise<MenuListApiResponse> => {
+  fetchAllMenus: async (boothId: string): Promise<MenuListApiResponse> => {
     const tableNum = localStorage.getItem('tableNum') || '';
 
     const res = await instance.get<MenuListApiResponse>(

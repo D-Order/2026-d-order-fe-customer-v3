@@ -82,20 +82,17 @@ const useMenuListPage = () => {
       setIsLoading(true);
       try {
         const boothId = localStorage.getItem('boothId');
-        if (!boothId || !/^\d+$/.test(boothId)) {
+        if (!boothId) {
           setIsLoading(false);
           // navigate(ROUTE_CONSTANTS.LOGIN);
           return;
         }
 
         const tableId = localStorage.getItem('tableNum');
-        const boothIdNumber = parseInt(boothId, 10);
         const tableNumber = tableId ? parseInt(tableId, 10) : null;
 
-        if (Number.isNaN(boothIdNumber)) throw new Error('Invalid boothId');
-
         // API 호출 (data.FEE / SET / MENU / DRINK 구조)
-        const payload = await MenuListService.fetchAllMenus(boothIdNumber);
+        const payload = await MenuListService.fetchAllMenus(boothId);
 
         const { data, booth_name, table_info } = payload;
         const NON_IMG = MENULISTPAGE_CONSTANTS.MENUITEMS.IMAGES.NONIMAGE;

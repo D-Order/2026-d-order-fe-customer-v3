@@ -4,7 +4,7 @@ import axios, {
   AxiosError,
   InternalAxiosRequestConfig,
 } from 'axios';
-import { attemptTableReEntry } from './tableReEntry';
+import { redirectToLoginAfterTableReset } from './tableReEntry';
 
 export const instance: AxiosInstance = axios.create({
   baseURL: import.meta.env.VITE_BASE_URL,
@@ -70,16 +70,9 @@ instance.interceptors.response.use(
         .then(() => instance.request(config));
     }
 
-    // 테이블 세션 만료 → 자동 재입장 시도, 실패 시 로그인 화면으로 폴백.
-    // 보통은 WS의 CART_RESET ended:true 핸들러가 먼저 처리하지만,
-    // WS가 끊긴 상태에서 410을 받는 엣지케이스를 위한 안전망.
+    // 테이블 세션 만료 → 로그인 화면으로 (손님이 다시 테이블 번호 입력)
     if (status === 410) {
-      attemptTableReEntry().then((ok) => {
-        if (!ok) {
-          const boothId = localStorage.getItem('boothId');
-          window.location.href = boothId ? `/?id=${boothId}` : '/';
-        }
-      });
+      redirectToLoginAfterTableReset();
     }
 
     return Promise.reject(error);
