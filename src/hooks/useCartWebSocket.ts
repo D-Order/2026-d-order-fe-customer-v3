@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import type { CartWsPayload, CartSnapshotData } from "../types/cartWs";
 import { useCartSnapshotStore } from "@stores/cartSnapshotStore";
-import { attemptTableReEntry } from "@services/tableReEntry";
+import { redirectToLoginAfterTableReset } from "@services/tableReEntry";
 
 const AUTH_FAILURE_CLOSE_CODE = 4001;
 
@@ -52,16 +52,16 @@ export function useCartWebSocket(tableUsageId: string | null) {
             data: payload?.data,
           });
 
-          // 어드민 테이블 초기화로 인한 cart 종료 → 자동 재입장.
+          // 어드민 테이블 초기화로 인한 cart 종료 → 로그인 화면으로.
           // BE 페이로드: { type: "CART_RESET", data: { table_usage_id, ended: true } }
           // 일반 주문 완료 시 CART_RESET에는 ended 필드가 없으므로 ended === true만 분기.
           if (
             payload?.type === 'CART_RESET' &&
             (payload.data as { ended?: boolean } | null)?.ended === true
           ) {
-            console.warn('[CartWS] 🔄 테이블 초기화 감지 → 재입장 시도');
-            attemptTableReEntry();
-            return; // 스냅샷 갱신 X (재입장 후 새 스냅샷이 따로 옴)
+            console.warn('[CartWS] 🔄 테이블 초기화 감지 → 로그인 화면으로 이동');
+            redirectToLoginAfterTableReset();
+            return;
           }
 
           if (payload?.data && typeof payload.data === "object") {

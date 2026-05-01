@@ -82,20 +82,17 @@ const useMenuListPage = () => {
       setIsLoading(true);
       try {
         const boothId = localStorage.getItem('boothId');
-        if (!boothId || !/^\d+$/.test(boothId)) {
+        if (!boothId) {
           setIsLoading(false);
           // navigate(ROUTE_CONSTANTS.LOGIN);
           return;
         }
 
         const tableId = localStorage.getItem('tableNum');
-        const boothIdNumber = parseInt(boothId, 10);
         const tableNumber = tableId ? parseInt(tableId, 10) : null;
 
-        if (Number.isNaN(boothIdNumber)) throw new Error('Invalid boothId');
-
         // API 호출 (data.FEE / SET / MENU / DRINK 구조)
-        const payload = await MenuListService.fetchAllMenus(boothIdNumber);
+        const payload = await MenuListService.fetchAllMenus(boothId);
 
         const { data, booth_name, table_info } = payload;
         const NON_IMG = MENULISTPAGE_CONSTANTS.MENUITEMS.IMAGES.NONIMAGE;
@@ -175,16 +172,6 @@ const useMenuListPage = () => {
 
         const allItemsSorted = sortByPriceDesc(allItems, (i) => i.price);
         setMenuItems(allItemsSorted);
-
-        const tu = localStorage.getItem('tableUsageId');
-        if (tu && /^\d+$/.test(tu)) {
-          try {
-            const snap = await cartApiV3.getDetail();
-            if (snap) useCartSnapshotStore.getState().setSnapshot(snap);
-          } catch {
-            /* 장바구니 없음·미생성 등 */
-          }
-        }
       } catch (e) {
         console.error(e);
         setMenuItems([]);
@@ -299,13 +286,6 @@ const useMenuListPage = () => {
           : { menu_id: selectedItem.id }),
         quantity: count,
       });
-
-      try {
-        const snap = await cartApiV3.getDetail();
-        if (snap) useCartSnapshotStore.getState().setSnapshot(snap);
-      } catch {
-        /* WS로도 갱신될 수 있음 */
-      }
 
       // 기존 UX 흐름 유지
       setIsClosing(true);
