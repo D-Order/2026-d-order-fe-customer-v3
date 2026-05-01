@@ -25,14 +25,12 @@ export interface TableEnterResponse {
 // 부스 이름 가져오기 (v3: 인증 불필요)
 export const fetchBoothName = async (boothId: string): Promise<string> => {
   try {
-    const numericBoothId = parseInt(boothId, 10);
-
-    if (isNaN(numericBoothId) || numericBoothId <= 0) {
+    if (!boothId) {
       return '부스 이름';
     }
 
     const response = await axios.get<BoothNameResponseV3>(
-      `${getBaseUrl()}/api/v3/django/booth/${numericBoothId}/name`,
+      `${getBaseUrl()}/api/v3/django/booth/${boothId}/name`,
       {
         headers: {
           'Content-Type': 'application/json',
@@ -59,16 +57,15 @@ export const enterTable = async (
   boothId: string,
   tableNum: string,
 ): Promise<import('axios').AxiosResponse<TableEnterResponse>> => {
-  const numericBoothId = parseInt(boothId, 10);
   const numericTableNum = parseInt(tableNum, 10);
 
-  // 유효성 검사: table_num은 양수(부스의 table에 속해야 함)
-  if (isNaN(numericBoothId) || numericBoothId <= 0) {
+  // 유효성 검사: boothId(UUID) 존재 여부만 확인
+  if (!boothId) {
     throw new Error('유효하지 않은 부스 ID입니다.');
   }
 
   const response = await axios.post<TableEnterResponse>(
-    `${getBaseUrl()}/api/v3/django/booth/${numericBoothId}/table/`,
+    `${getBaseUrl()}/api/v3/django/booth/${boothId}/table/`,
     { table_num: numericTableNum },
     {
       headers: {
