@@ -87,6 +87,8 @@ const useShoppingCartPage = () => {
   const paymentInfoInFlight = useRef(false);
   /** getPaymentInfo() 성공 → 서버가 이미 pending_payment로 전환했음을 추적 */
   const paymentInfoSucceeded = useRef(false);
+  /** 새로고침 복원 중복 방지 — pending_payment 진입 시 한 번만 복원 */
+  const hasRestoredModal = useRef(false);
 
   const menusFromSnapshot = useMemo(
     () =>
@@ -136,6 +138,35 @@ const useShoppingCartPage = () => {
       navigate(ROUTE_CONSTANTS.ORDERCOMPLETE);
     }
   }, [cartStatus, navigate]);
+
+  // 새로고침 후 결제 모달 소유권 복원 + 상태 변경 시 소유권 초기화
+  useEffect(() => {
+    if (cartStatus === 'pending_payment') {
+      if (!hasRestoredModal.current) {
+        // 내가 결제를 시작한 사람인지 확인
+        const clientId = sessionStorage.getItem('clientId');
+        const paymentOwner = sessionStorage.getItem('paymentOwner');
+        if (clientId && clientId === paymentOwner) {
+          const storedInfoRaw = sessionStorage.getItem('paymentAccountInfo');
+          if (storedInfoRaw) {
+            try {
+              const storedInfo = JSON.parse(storedInfoRaw) as accountInfoType;
+              setAccountInfo(storedInfo);
+              setIsSendMoneyModal(true);
+              hasRestoredModal.current = true;
+            } catch {
+              // JSON 파싱 실패 시 무시 (복원 불가)
+            }
+          }
+        }
+      }
+    } else if (cartStatus) {
+      // pending_payment 아닌 상태로 전환 → 소유권 초기화
+      hasRestoredModal.current = false;
+      sessionStorage.removeItem('paymentOwner');
+      sessionStorage.removeItem('paymentAccountInfo');
+    }
+  }, [cartStatus]);
 
   const shoppingItemResponse = useMemo(() => {
     if (!snapshot) return undefined;
@@ -206,9 +237,16 @@ const useShoppingCartPage = () => {
       if (reqId !== paymentInfoRequestId.current) return;
       // API 성공 = 서버가 이미 pending_payment로 전환한 상태
       paymentInfoSucceeded.current = true;
+      hasRestoredModal.current = true; // 이미 모달 열림 → 복원 로직 스킵
+      // 결제 소유권 기록 (새로고침 후 복원에 사용)
+      const clientId = sessionStorage.getItem('clientId');
+      if (clientId) {
+        sessionStorage.setItem('paymentOwner', clientId);
+      }
       const info = parsePaymentInfoResponse(response);
       if (info) {
         setAccountInfo(info);
+        sessionStorage.setItem('paymentAccountInfo', JSON.stringify(info));
         return;
       }
       setPaymentModalError(
@@ -238,6 +276,10 @@ const useShoppingCartPage = () => {
     setPaymentModalLoading(false);
     setPaymentModalError(null);
     setAccountInfo(null);
+    // 모달 닫기 = 결제 포기 → 소유권 초기화
+    localStorage.removeItem('paymentOwner');
+    localStorage.removeItem('paymentAccountInfo');
+    hasRestoredModal.current = false;
 
     // 서버가 이미 pending_payment로 전환했으면 취소 요청 (WS 이벤트 도착 전에도 동작)
     if (cartStatus === 'pending_payment' || paymentInfoSucceeded.current) {
