@@ -49,6 +49,10 @@ export const useLogin = (boothId: string | null) => {
             typeof headerBoothId === "string" ? headerBoothId : String(headerBoothId)
           );
         }
+        // 테이블 입장마다 새 clientId 발급, 이전 결제 소유권 초기화
+        sessionStorage.setItem("clientId", crypto.randomUUID());
+        sessionStorage.removeItem("paymentOwner");
+        sessionStorage.removeItem("paymentAccountInfo");
         navigate(ROUTE_CONSTANTS.MENULIST);
       } else {
         setIsTableError(true);
